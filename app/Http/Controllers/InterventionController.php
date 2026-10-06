@@ -11,7 +11,9 @@ use App\Models\Intervention;
 use App\View\Components\AddNewIntervention;
 use App\View\Components\InterventionClose;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -24,7 +26,7 @@ class InterventionController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -53,24 +55,24 @@ class InterventionController extends Controller
             ->get();
 
         return DataTables::of($interventions)
-            ->addColumn('number', function (intervention $intervention) {
+            ->addColumn('number', function (Intervention $intervention) {
                 return $intervention->number();
             })
-            ->addColumn('code', function (intervention $intervention) {
+            ->addColumn('code', function (Intervention $intervention) {
                 $healthinfo = $intervention->health_information;
                 $code = $healthinfo['code'].Helper::getName($healthinfo);
 
                 return '<a href='.\URL::route('healthinformation.show', $healthinfo).'>'.$code.'</a>';
             })
-            ->addColumn('user', function (intervention $intervention) {
+            ->addColumn('user', function (Intervention $intervention) {
                 return $intervention->user['name'];
             })
-            ->addColumn('status', function (intervention $intervention) {
+            ->addColumn('status', function (Intervention $intervention) {
                 $status = Helper::getHealthStatus($intervention);
 
                 return $status ?? 'Abgeschlossen';
             })
-            ->addColumn('abschluss', function (intervention $intervention) {
+            ->addColumn('abschluss', function (Intervention $intervention) {
                 if (isset($intervention['date_close'])) {
                     $status = Carbon::parse($intervention['date_close'])->format('d.m.Y').' '.$intervention['time_close'].' - '.$intervention['user_close'].'<br>';
                     $status .= $intervention['further_treatment'].'<br>';
@@ -81,17 +83,17 @@ class InterventionController extends Controller
 
                 return $status;
             })
-            ->addColumn('picture', function (intervention $intervention) {
+            ->addColumn('picture', function (Intervention $intervention) {
                 if ($intervention['file']) {
                     return '<a href="#" class="intervention_image"><img src="'.Storage::url($intervention['file']).'" alt="" width="250px"></a>';
                 } else {
                     return '';
                 }
             })
-            ->editColumn('date', function (intervention $intervention) {
+            ->editColumn('date', function (Intervention $intervention) {
                 return Carbon::parse($intervention['date'])->format('d.m.Y').'<br>'.$intervention['time'];
             })
-            ->addColumn('intervention', function (intervention $intervention) use ($filter) {
+            ->addColumn('intervention', function (Intervention $intervention) use ($filter) {
                 $text = '1. '.$intervention['parameter'].'<br>';
                 $text .= '2. '.$intervention['value'];
                 $text .= isset($intervention['medication']) ? '<br>3. '.$intervention['medication'] : '';
@@ -106,8 +108,9 @@ class InterventionController extends Controller
 
                 return $text;
             })
-            ->addColumn('actions', function (intervention $intervention) {
+            ->addColumn('actions', function (Intervention $intervention) {
                 $actions = '<a href='.\URL::route('interventions.edit', $intervention).' title="Intervention Bearbeiten"><i class="fa-regular fa-pen-to-square fa-xl"></i></a>';
+
                 return $actions;
             })
             ->rawColumns(['code', 'picture', 'intervention', 'status', 'abschluss', 'actions', 'date'])
@@ -117,6 +120,7 @@ class InterventionController extends Controller
 
     public function close(Intervention $intervention)
     {
+        $this->authorizeCamp($intervention->health_information?->camp_id);
         if (! isset($intervention['date_close'])) {
             $intervention['date_close'] = Carbon::now()->toDateString();
             $intervention['time_close'] = Carbon::now()->toTimeString();
@@ -143,8 +147,9 @@ class InterventionController extends Controller
 
     public function createNew(HealthInformation $healthInformation, Intervention $intervention)
     {
-        //
-        $intervention = new intervention([
+        $this->authorizeCamp($healthInformation->camp_id);
+        $this->authorizeCamp($intervention->health_information?->camp_id);
+        $intervention = new Intervention([
             'intervention_master_id' => $intervention['id'],
             'health_information_id' => $healthInformation['id'],
             'date' => Carbon::now()->toDateString(),
@@ -159,7 +164,7 @@ class InterventionController extends Controller
         //
         $input = $request->all();
         $health_status = HealthStatus::pluck('name', 'id')->all();
-        $intervention = new intervention([
+        $intervention = new Intervention([
             'health_information_id' => $input['healthInformation_id'],
             'date' => Carbon::now()->toDateString(),
             'time' => Carbon::now()->toTimeString(),
@@ -172,7 +177,7 @@ class InterventionController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\RedirectResponse
+     * @return RedirectResponse
      */
     public function store(Request $request)
     {
@@ -181,6 +186,8 @@ class InterventionController extends Controller
         $user = Auth::user();
         $input['user_id'] = $user['id'];
         $health_information = HealthInformation::findOrFail($input['health_information_id']);
+        $this->authorizeCamp($health_information->camp_id);
+        $this->authorizeInterventionIds($request, $health_information);
         $camp = Camp::where('id', $health_information['camp_id'])->first();
         if (! $camp['demo'] && $file = $request->file('file')) {
 
@@ -292,8 +299,8 @@ class InterventionController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\HealthInformation  $healthInformation
-     * @return \Illuminate\Http\Response
+     * @param  HealthInformation  $healthInformation
+     * @return Response
      */
     public function show(HealthInformation $healthinformation)
     {
@@ -304,12 +311,13 @@ class InterventionController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \App\Models\HealthInformation  $healthInformation
-     * @return \Illuminate\Http\Response
+     * @param  HealthInformation  $healthInformation
+     * @return Response
      */
     public function edit(Intervention $intervention)
     {
-        //
+        $this->authorizeCamp($intervention->health_information?->camp_id);
+
         return Helper::getHealthInformationShow($intervention);
 
     }
@@ -317,7 +325,7 @@ class InterventionController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, HealthInformation $healthInformation)
     {
@@ -327,10 +335,27 @@ class InterventionController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy(HealthInformation $healthInformation)
     {
         //
+    }
+
+    /**
+     * Alle Interventionen, die store() per ID aus dem Request lädt, müssen zum selben Gesundheitsblatt gehören.
+     */
+    private function authorizeInterventionIds(Request $request, HealthInformation $healthInformation): void
+    {
+        $ids = array_filter([
+            $request->input('intervention_id'),
+            $request->input('intervention_master_id'),
+            ...array_column((array) $request->input('intervention_sub', []), 'intervention_id'),
+        ]);
+
+        foreach ($ids as $id) {
+            $intervention = Intervention::findOrFail($id);
+            abort_unless($intervention->health_information_id === $healthInformation->id, 403);
+        }
     }
 }

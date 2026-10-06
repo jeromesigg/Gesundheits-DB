@@ -10,6 +10,7 @@ use App\Models\Intervention;
 use Auth;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Validator;
 use Yajra\DataTables\Facades\DataTables;
@@ -19,7 +20,7 @@ class HealthInformationController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -64,7 +65,7 @@ class HealthInformationController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -74,7 +75,7 @@ class HealthInformationController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -84,12 +85,12 @@ class HealthInformationController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\HealthInformation  $healthInformation
-     * @return \Illuminate\Http\Response
+     * @param  HealthInformation  $healthInformation
+     * @return Response
      */
     public function show(HealthInformation $healthinformation)
     {
-        //
+        $this->authorizeCamp($healthinformation->camp_id);
         $intervention = new Intervention([
             'health_information_id' => $healthinformation['id'],
             'date' => Carbon::now()->toDateString(),
@@ -120,7 +121,7 @@ class HealthInformationController extends Controller
 
     public function uploadProtocol(Request $request, HealthInformation $healthinformation)
     {
-        //
+        $this->authorizeCamp($healthinformation->camp_id);
         $validator = Validator::make($request->all(), [
             'file_protocol' => 'mimes:pdf|max:2000',
         ], [
@@ -150,22 +151,23 @@ class HealthInformationController extends Controller
 
     public function downloadProtocol(HealthInformation $healthinformation)
     {
-        //
+        $this->authorizeCamp($healthinformation->camp_id);
+
         return response()->download(storage_path($healthinformation['file_protocol']));
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \App\Models\HealthInformation  $healthInformation
-     * @return \Illuminate\Http\Response
+     * @param  HealthInformation  $healthInformation
+     * @return Response
      */
     public function edit(HealthInformation $healthinformation) {}
 
     /**
      * Update the specified resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, HealthInformation $healthInformation)
     {
@@ -175,11 +177,11 @@ class HealthInformationController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function print(HealthInformation $healthInformation)
     {
-        //
+        $this->authorizeCamp($healthInformation->camp_id);
         $healthform = Helper::getHealthForm($healthInformation['code']);
 
         return view('dashboard.healthinformation.print', compact('healthform', 'healthInformation'));
@@ -187,8 +189,12 @@ class HealthInformationController extends Controller
 
     public function searchResponseCode(Request $request)
     {
-        $healthinformations = HealthInformation::search($request->get('term'))->get();
+        $camp = Auth::user()->camp;
 
-        return $healthinformations;
+        return HealthInformation::search($request->get('term'))
+            ->get()
+            ->where('camp_id', $camp['id'])
+            ->map(fn (HealthInformation $healthInformation) => ['code' => $healthInformation->code])
+            ->values();
     }
 }

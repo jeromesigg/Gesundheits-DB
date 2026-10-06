@@ -70,20 +70,23 @@ Route::group(['middleware' => 'verified'], function () {
 
     Route::resource('/camps', 'CampController')->only(['create', 'store', 'update']);
 
-    Route::resource('dashboard/healthinformation', 'HealthInformationController');
-    Route::get('healthinformation/createDataTables', ['as' => 'healthinformation.CreateDataTables', 'uses' => 'HealthInformationController@createDataTables']);
-    Route::get('healthinformation/searchajaxcode', ['as' => 'searchajaxcode', 'uses' => 'HealthInformationController@searchResponseCode']);
-    Route::get('healthinformation/search', ['as' => 'healthinformation.search', 'uses' => 'HealthInformationController@search']);
-    Route::resource('dashboard/interventions', 'InterventionController');
-    Route::get('interventions/createDataTables', ['as' => 'interventions.CreateDataTables', 'uses' => 'InterventionController@createDataTables']);
-    Route::get('interventions/close/{intervention}', ['as' => 'interventions.close', 'uses' => 'InterventionController@close']);
-    Route::get('healthinformation/{healthInformation}/intervention/{intervention}/createNew', ['as' => 'interventions.createNew', 'uses' => 'InterventionController@createNew']);
-    Route::get('interventions/addNew', ['as' => 'interventions.addNew', 'uses' => 'InterventionController@addNew']);
-    Route::get('interventions/closeAjax', ['as' => 'interventions.closeAjax', 'uses' => 'InterventionController@closeAjax']);
-    Route::resource('dashboard/healthforms', 'HealthFormController')->except(['show', 'update', 'edit']);
-    Route::get('healthforms/createDataTables', ['as' => 'healthforms.CreateDataTables', 'uses' => 'HealthFormController@createDataTables']);
+    Route::group(['middleware' => 'helper'], function () {
+        Route::resource('dashboard/healthinformation', 'HealthInformationController')->only(['index', 'show']);
+        Route::get('healthinformation/createDataTables', ['as' => 'healthinformation.CreateDataTables', 'uses' => 'HealthInformationController@createDataTables']);
+        Route::get('healthinformation/searchajaxcode', ['as' => 'searchajaxcode', 'uses' => 'HealthInformationController@searchResponseCode']);
+        Route::get('healthinformation/search', ['as' => 'healthinformation.search', 'uses' => 'HealthInformationController@search']);
+        Route::resource('dashboard/interventions', 'InterventionController')->only(['index', 'store', 'edit']);
+        Route::get('interventions/createDataTables', ['as' => 'interventions.CreateDataTables', 'uses' => 'InterventionController@createDataTables']);
+        Route::get('interventions/close/{intervention}', ['as' => 'interventions.close', 'uses' => 'InterventionController@close']);
+        Route::get('healthinformation/{healthInformation}/intervention/{intervention}/createNew', ['as' => 'interventions.createNew', 'uses' => 'InterventionController@createNew']);
+        Route::get('interventions/addNew', ['as' => 'interventions.addNew', 'uses' => 'InterventionController@addNew']);
+        Route::get('interventions/closeAjax', ['as' => 'interventions.closeAjax', 'uses' => 'InterventionController@closeAjax']);
+        Route::resource('dashboard/healthforms', 'HealthFormController')->only(['index']);
+        Route::get('healthforms/createDataTables', ['as' => 'healthforms.CreateDataTables', 'uses' => 'HealthFormController@createDataTables']);
+    });
 
     Route::group(['middleware' => 'manager'], function () {
+        Route::resource('dashboard/healthforms', 'HealthFormController')->only(['create', 'store']);
         Route::get('dashboard/users/searchajaxuser', ['as' => 'searchajaxuser', 'uses' => 'AdminUsersController@searchResponseUser']);
         Route::post('dashboard/users/add', ['as' => 'users.add', 'uses' => 'AdminUsersController@add']);
         Route::resource('dashboard/users', 'AdminUsersController', ['as' => 'dashboard']);

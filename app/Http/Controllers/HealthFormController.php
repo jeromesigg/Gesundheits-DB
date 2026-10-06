@@ -264,7 +264,7 @@ class HealthFormController extends Controller
 
     public function showOrEdit(HealthForm $healthform)
     {
-        //
+        $this->authorizeCamp($healthform->camp_id);
         $camp = Auth::user()->camp;
         $healthinfo = Helper::getHealthInfo($healthform['code']);
         if ($camp['independent_form_fill'] || ($healthform['finish'] && $camp['forms_finished'])) {
@@ -298,6 +298,7 @@ class HealthFormController extends Controller
 
     public function open(HealthForm $healthform)
     {
+        $this->authorizeCamp($healthform->camp_id);
         $input['finish'] = false;
         $input['date_finished'] = null;
         $healthform->update($input);
@@ -466,7 +467,7 @@ class HealthFormController extends Controller
         }
 
         $user = Auth::user();
-        if ($user && $user->isManager() && $user->camp_id === $healthform->camp_id) {
+        if ($user && $user->isManager() && (int) $user->camp_id === (int) $healthform->camp_id) {
             return;
         }
 

@@ -4,7 +4,7 @@
 
 > **Beim Hinzufügen eines Tests bitte diese Datei ergänzen**, siehe [Neuen Test schreiben](#neuen-test-schreiben).
 
-Stand 06.10.2026: **38 Testfälle in 10 Dateien**, Laufzeit rund 1–2 Sekunden.
+Stand 06.10.2026: **92 Testfälle in 12 Dateien**, Laufzeit rund 3 Sekunden.
 Aktuelle Zahlen: `vendor/bin/phpunit --list-tests`
 
 ## Inhalt
@@ -78,6 +78,8 @@ Ohne Sail gehen dieselben Befehle mit `php artisan test` bzw. `vendor/bin/phpuni
 | Bereich | Datei | Fälle | Prüft |
 |---|---|---:|---|
 | Grundlagen | `TestInfrastructureTest` | 7 | Test-DB, Seeder, Szenario, Seitenaufruf über den ganzen Stack |
+| Smoke | `Smoke/AllRoutesSmokeTest` | 5 | Jede GET-Route pro Rolle (Gast, Teilnehmende, Helfende, Lagerleitung, Admin) ohne Serverfehler |
+| Sicherheit | `Security/CampAccessTest` | 49 | Gesundheitsdaten nur für Helfende+ und nur im eigenen Lager |
 | Sicherheit | `Security/AdminRoutesTest` | 8 | Wartungsrouten nur für Admins, gefährliche Routen entfernt |
 | Models | `Models/RoleTest` | 1 | Rollen-Prüfungen liefern Booleans |
 | Seeder | `Seeders/PermissionRoleSeederTest` | 1 | Admin-Passwort kommt aus der Config |
@@ -100,7 +102,29 @@ Ohne Sail gehen dieselben Befehle mit `php artisan test` bzw. `vendor/bin/phpuni
 | `test_scenario_users_have_expected_roles` | Rollen der Szenario-User |
 | `test_dashboard_renders_for_manager` | Dashboard rendert über den ganzen Stack |
 
+### Smoke
+
+**[`AllRoutesSmokeTest`](Feature/Smoke/AllRoutesSmokeTest.php)**: liest alle GET-Routen aus dem Router und ruft jede pro Rolle auf, mit Standard-Objekten und Randfällen aus dem Szenario (Blatt ohne Gruppe, abgeschlossene Intervention). Erwartung: kein Status >= 500.
+
+- Neue Routen werden automatisch mitgetestet. Fehlt ein Wert für einen Parameter, `routeParameters()` ergänzen.
+- `EXCLUDED`: Wartungsrouten und signierte URL, mit Begründung.
+- `KNOWN_ISSUES`: bekannte Serverfehler. Der Test ist rot, wenn ein neuer Fehler auftritt **oder** ein bekannter behoben ist (dann Eintrag entfernen).
+
 ### Sicherheit
+
+**[`CampAccessTest`](Feature/Security/CampAccessTest.php)**: Gesundheitsinfos, Interventionen und Gesundheitsblätter im Dashboard.
+
+| Test | Prüft |
+|---|---|
+| `test_participant_cannot_open_health_data_pages` | Eingeloggte Teilnehmende werden von allen Seiten mit Gesundheitsdaten weggeleitet |
+| `test_helper_can_open_health_data_pages_of_own_camp` | Helfende sehen dieselben Seiten im eigenen Lager |
+| `test_manager_cannot_open_pages_of_other_camp`, `test_admin_cannot_open_pages_of_other_camp` | Fremdes Lager: 403 auf Gesundheitsinfo, Interventionen, Druckansicht, Protokoll, Gesundheitsblatt |
+| `test_helper_cannot_open_health_information_of_other_camp` | Dasselbe für Helfende |
+| `test_user_without_camp_cannot_open_health_information` | Frisch registrierter User kommt nicht an Gesundheitsdaten |
+| `test_code_search_*` | Code-Suche liefert nur Codes des eigenen Lagers und nur das Feld `code` |
+| `test_helper_cannot_store/update/add_follow_up/update_sub_*` | Speichern von Interventionen: alle IDs aus dem Request müssen zum eigenen Gesundheitsblatt gehören |
+| `test_helper_can_store_intervention_for_own_camp` | Normalfall funktioniert |
+| `test_manager_cannot_reopen_health_form_of_other_camp`, `test_manager_cannot_upload_protocol_for_other_camp` | Aktionen der Lagerleitung nur im eigenen Lager |
 
 **[`AdminRoutesTest`](Feature/Security/AdminRoutesTest.php)**: die Wartungsrouten `admin/run-*` führen Artisan-Befehle aus. Artisan ist im Test gefakt.
 
@@ -153,6 +177,17 @@ Ohne Sail gehen dieselben Befehle mit `php artisan test` bzw. `vendor/bin/phpuni
 | Lagerleitung eines anderen Lagers | nein |
 | Helfende, Teilnehmende (eingeloggt) | nein |
 
+### Gesundheitsdaten im Dashboard
+
+| Rolle | Gesundheitsinfos, Interventionen, Gesundheitsblätter **im eigenen Lager** | **Fremdes Lager** |
+|---|---|---|
+| Teilnehmende (eingeloggt) | nein, nur Dashboard und eigenes Profil | nein |
+| Helfende | ansehen, Interventionen erfassen und abschliessen | nein |
+| Lagerleitung | alles (inkl. Gesundheitsblätter erfassen, importieren, öffnen) | nein |
+| Admin | alles im aktuell gewählten Lager | nein, erst nach Wechsel ins Lager |
+
+Umsetzung: Routen-Gruppen `helper`/`manager` in `routes/web.php`, Lager-Prüfung `Controller::authorizeCamp()`.
+
 ### Wartungsrouten `admin/run-*`
 
 Nur eingeloggte, verifizierte Admins (`run-migrations`, `run-deployment`). Lagerleitung und Gäste werden umgeleitet. `run-migrations-seed` und `run-seeding` sind entfernt.
@@ -162,6 +197,7 @@ Nur eingeloggte, verifizierte Admins (`run-migrations`, `run-deployment`). Lager
 ## Neuen Test schreiben
 
 1. Ort wählen: `tests/Feature/Security` für Berechtigungen, `tests/Feature/Smoke` für seitenweite Prüfungen, sonst `tests/Feature/<Bereich>`.
+1. Neue Routen mit Parametern: Wert in `AllRoutesSmokeTest::routeParameters()` ergänzen.
 2. Von `Tests\TestCase` erben, Testdaten mit `CampScenario` oder den Factories.
 3. Bei Fehlern zuerst den Test (rot), dann den Fix.
 4. Methoden `test_<englisch_snake_case>`, Erklärungen auf Deutsch.
