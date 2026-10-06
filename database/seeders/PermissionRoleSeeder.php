@@ -30,7 +30,7 @@ class PermissionRoleSeeder extends Seeder
             'username' => 'Administrator',
             'email' => 'admin@ehealth',
             'slug' => 'administrator',
-            'password' => Hash::make(env('ADMIN_PASSWORD')),
+            'password' => Hash::make(config('app.admin_password')),
             'role_id' => config('status.role_Administrator'),
             'email_verified_at' => now(),
         ]);

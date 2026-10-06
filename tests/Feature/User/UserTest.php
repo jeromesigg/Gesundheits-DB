@@ -2,23 +2,31 @@
 
 namespace Tests\Feature\User;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\CampScenario;
 use Tests\TestCase;
 
 class UserTest extends TestCase
 {
-    use RefreshDatabase; // DB wird vor jedem Test zurückgesetzt
-
-    /**
-     * A basic feature test example.
-     */
-    public function test_user_can_see_info_with_corrent_number(): void
+    public function test_participant_sees_health_form_with_correct_codes(): void
     {
-        $response = $this->post('/healthform', [
-            'code' => '100001',
-            'camp_code' => '1234',
-        ]);
+        $scenario = CampScenario::create();
 
-        $response->assertRedirect('/healthform'); // oder wohin dein Register leitet
+        $this->post('/healthform', [
+            'code' => $scenario->openCode,
+            'camp_code' => $scenario->camp->code,
+        ])->assertOk()
+            ->assertViewIs('healthform.edit')
+            ->assertSee($scenario->openForm->nickname);
+    }
+
+    public function test_participant_cannot_open_health_form_of_finished_camp(): void
+    {
+        $scenario = CampScenario::create();
+        $scenario->camp->update(['finish' => true]);
+
+        $this->from('/')->post('/healthform', [
+            'code' => $scenario->openCode,
+            'camp_code' => $scenario->camp->code,
+        ])->assertRedirect('/')->assertSessionHasErrors();
     }
 }

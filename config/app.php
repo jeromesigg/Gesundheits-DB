@@ -18,6 +18,12 @@ return [
     'version' => 'V2.0',
 
     /*
+    | Passwort des Administrators, den der PermissionRoleSeeder anlegt.
+    */
+
+    'admin_password' => env('ADMIN_PASSWORD'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

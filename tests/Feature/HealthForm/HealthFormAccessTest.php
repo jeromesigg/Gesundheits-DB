@@ -4,11 +4,13 @@ namespace Tests\Feature\HealthForm;
 
 use App\Models\Camp;
 use App\Models\HealthForm;
-use App\Models\User;
+use Tests\Support\CampScenario;
 use Tests\TestCase;
 
 class HealthFormAccessTest extends TestCase
 {
+    private CampScenario $scenario;
+
     private Camp $camp;
 
     private HealthForm $healthForm;
@@ -17,9 +19,9 @@ class HealthFormAccessTest extends TestCase
     {
         parent::setUp();
 
-        $this->withoutVite();
-        $this->camp = Camp::where('code', 1234)->firstOrFail();
-        $this->healthForm = HealthForm::where('camp_id', $this->camp->id)->firstOrFail();
+        $this->scenario = CampScenario::create();
+        $this->camp = $this->scenario->camp;
+        $this->healthForm = $this->scenario->openForm;
     }
 
     public function test_guest_without_codes_cannot_show_health_form(): void
@@ -75,10 +77,8 @@ class HealthFormAccessTest extends TestCase
 
     public function test_personal_code_does_not_work_with_code_of_other_camp(): void
     {
-        $otherCamp = $this->createOtherCamp();
-
         $this->from('/')->post('/healthform', [
-            'camp_code' => $otherCamp->code,
+            'camp_code' => $this->scenario->otherCamp->code,
             'code' => $this->healthForm->code,
         ])->assertRedirect('/')->assertSessionHasErrors();
 
@@ -87,9 +87,7 @@ class HealthFormAccessTest extends TestCase
 
     public function test_codes_of_one_health_form_do_not_unlock_another(): void
     {
-        $otherHealthForm = HealthForm::where('camp_id', $this->camp->id)
-            ->where('id', '<>', $this->healthForm->id)
-            ->firstOrFail();
+        $otherHealthForm = $this->scenario->finishedForm;
 
         $this->post('/healthform', [
             'camp_code' => $this->camp->code,
@@ -101,43 +99,17 @@ class HealthFormAccessTest extends TestCase
 
     public function test_manager_of_same_camp_can_show_health_form(): void
     {
-        $manager = User::factory()->create([
-            'role_id' => config('status.role_Lagerleiter'),
-            'camp_id' => $this->camp->id,
-        ]);
-
-        $this->actingAs($manager)->get(route('healthform.show', $this->healthForm))->assertOk();
+        $this->actingAs($this->scenario->manager)->get(route('healthform.show', $this->healthForm))->assertOk();
     }
 
     public function test_manager_of_other_camp_cannot_show_health_form(): void
     {
-        $manager = User::factory()->create([
-            'role_id' => config('status.role_Lagerleiter'),
-            'camp_id' => $this->createOtherCamp()->id,
-        ]);
-
-        $this->actingAs($manager)->get(route('healthform.show', $this->healthForm))->assertForbidden();
+        $this->actingAs($this->scenario->otherManager)->get(route('healthform.show', $this->healthForm))->assertForbidden();
     }
 
     public function test_helper_of_same_camp_cannot_show_health_form(): void
     {
-        $helper = User::factory()->create([
-            'role_id' => config('status.role_Helfer'),
-            'camp_id' => $this->camp->id,
-        ]);
-
-        $this->actingAs($helper)->get(route('healthform.show', $this->healthForm))->assertForbidden();
-    }
-
-    private function createOtherCamp(): Camp
-    {
-        return Camp::create([
-            'name' => 'Anderes Lager',
-            'code' => 5678,
-            'user_id' => 1,
-            'finish' => false,
-            'counter' => 0,
-        ]);
+        $this->actingAs($this->scenario->helper)->get(route('healthform.show', $this->healthForm))->assertForbidden();
     }
 
     /**

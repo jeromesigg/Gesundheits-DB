@@ -118,13 +118,5 @@ Route::group(['middleware' => 'verified'], function () {
 
             return true;
         });
-
-        Route::get('admin/run-migrations-seed', function () {
-            return Artisan::call('migrate:refresh', ['--seed' => true, '--force' => true]);
-        });
-
-        Route::get('admin/run-seeding', function () {
-            return Artisan::call('db:seed', ['--class' => 'InterventionSeeder', '--force' => true]);
-        });
     });
 });

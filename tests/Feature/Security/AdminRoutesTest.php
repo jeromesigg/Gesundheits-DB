@@ -19,8 +19,6 @@ class AdminRoutesTest extends TestCase
         return [
             'migrate' => ['/admin/run-migrations', 'migrate', ['--force' => true]],
             'deployment' => ['/admin/run-deployment', 'optimize:clear', []],
-            'migrate refresh seed' => ['/admin/run-migrations-seed', 'migrate:refresh', ['--seed' => true, '--force' => true]],
-            'seeding' => ['/admin/run-seeding', 'db:seed', ['--class' => 'InterventionSeeder', '--force' => true]],
         ];
     }
 
@@ -58,5 +56,27 @@ class AdminRoutesTest extends TestCase
         Artisan::shouldReceive('call')->once()->with($command, ...($arguments === [] ? [] : [$arguments]))->andReturn(0);
 
         $this->actingAs($admin)->get($uri)->assertOk();
+    }
+
+    /**
+     * Entfernte Routen: migrate:refresh löschte alle Daten, run-seeding legte erfundene Interventionen an.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function removedRoutes(): array
+    {
+        return [
+            'migrate refresh seed' => ['/admin/run-migrations-seed'],
+            'seeding' => ['/admin/run-seeding'],
+        ];
+    }
+
+    #[DataProvider('removedRoutes')]
+    public function test_removed_route_does_not_exist_for_admins(string $uri): void
+    {
+        $admin = User::factory()->create(['role_id' => config('status.role_Administrator')]);
+        Artisan::shouldReceive('call')->never();
+
+        $this->actingAs($admin)->get($uri)->assertNotFound();
     }
 }
