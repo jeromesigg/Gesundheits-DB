@@ -206,6 +206,7 @@ class InterventionController extends Controller
                             'comment_close' => $intervention['comment_close'],
                             'further_treatment' => $intervention['further_treatment'],
                             'user_close' => $intervention['user_close'],
+                            'health_information_id' => $health_information['id'],
                         ]);
                     }
                 }
@@ -228,6 +229,7 @@ class InterventionController extends Controller
             foreach ($new_interventions as $key => $new_intervention) {
                 $input_new = $new_intervention;
                 $input_new['user_id'] = $user['id'];
+                $input_new['health_information_id'] = $health_information['id'];
                 if (isset($intervention['intervention_master_id'])) {
                     $input_new['intervention_master_id'] = $intervention['intervention_master_id'];
                 } else {
