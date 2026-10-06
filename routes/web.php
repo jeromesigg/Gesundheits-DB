@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\HomeController;
+use App\Models\Camp;
 use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,8 +18,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    $camp_counter = \App\Models\Camp::where('finish', '=', true)->where('counter', '>', 0)->get()->count();
-    $healhform_counter = \App\Models\Camp::where('finish', '=', true)->where('counter', '>', 0)->sum('counter');
+    $camp_counter = Camp::where('finish', '=', true)->where('counter', '>', 0)->get()->count();
+    $healhform_counter = Camp::where('finish', '=', true)->where('counter', '>', 0)->sum('counter');
 
     return view('welcome', compact('camp_counter', 'healhform_counter'));
 });
@@ -106,23 +108,23 @@ Route::group(['middleware' => 'verified'], function () {
         Route::resource('dashboard/helps', 'HelpController');
         // Route::resource('dashboard/interventionclasses', 'InterventionClassController');
         Route::post('healthforms/{healthform}/newCode', ['as' => 'healthforms.newCode', 'uses' => 'HealthFormController@newCode']);
+
+        Route::get('admin/run-migrations', function () {
+            return Artisan::call('migrate', ['--force' => true]);
+        });
+
+        Route::get('admin/run-deployment', function () {
+            Artisan::call('optimize:clear');
+
+            return true;
+        });
+
+        Route::get('admin/run-migrations-seed', function () {
+            return Artisan::call('migrate:refresh', ['--seed' => true, '--force' => true]);
+        });
+
+        Route::get('admin/run-seeding', function () {
+            return Artisan::call('db:seed', ['--class' => 'InterventionSeeder', '--force' => true]);
+        });
     });
-});
-
-Route::get('admin/run-migrations', function () {
-    return Artisan::call('migrate', ['--force' => true]);
-});
-
-Route::get('admin/run-deployment', function () {
-    Artisan::call('optimize:clear');
-
-    return true;
-});
-
-Route::get('admin/run-migrations-seed', function () {
-    return Artisan::call('migrate:refresh', ['--seed' => true, '--force' => true]);
-});
-
-Route::get('admin/run-seeding', function () {
-    return Artisan::call('db:seed', ['--class' => 'InterventionSeeder', '--force' => true]);
 });

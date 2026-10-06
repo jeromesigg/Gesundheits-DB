@@ -1,0 +1,154 @@
+<?php
+
+namespace Tests\Feature\HealthForm;
+
+use App\Models\Camp;
+use App\Models\HealthForm;
+use App\Models\User;
+use Tests\TestCase;
+
+class HealthFormAccessTest extends TestCase
+{
+    private Camp $camp;
+
+    private HealthForm $healthForm;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+        $this->camp = Camp::where('code', 1234)->firstOrFail();
+        $this->healthForm = HealthForm::where('camp_id', $this->camp->id)->firstOrFail();
+    }
+
+    public function test_guest_without_codes_cannot_show_health_form(): void
+    {
+        $this->get(route('healthform.show', $this->healthForm))->assertForbidden();
+    }
+
+    public function test_guest_without_codes_cannot_open_print_view(): void
+    {
+        $this->get(route('healthform.downloadPDF', $this->healthForm))->assertForbidden();
+    }
+
+    public function test_guest_without_codes_cannot_download_allergy_file(): void
+    {
+        $this->get(route('downloadAllergy', $this->healthForm))->assertForbidden();
+    }
+
+    public function test_guest_without_codes_cannot_update_health_form(): void
+    {
+        $nickname = $this->healthForm->nickname;
+
+        $this->patch(route('healthform.update', $this->healthForm), $this->updatePayload('Fremd'))
+            ->assertForbidden();
+
+        $this->assertSame($nickname, $this->healthForm->fresh()->nickname);
+    }
+
+    public function test_guest_with_correct_codes_can_open_and_update_health_form(): void
+    {
+        $this->post('/healthform', [
+            'camp_code' => $this->camp->code,
+            'code' => $this->healthForm->code,
+        ])->assertOk()->assertViewIs('healthform.edit');
+
+        $this->get(route('healthform.show', $this->healthForm))->assertOk();
+        $this->get(route('healthform.downloadPDF', $this->healthForm))->assertOk();
+
+        $this->patch(route('healthform.update', $this->healthForm), $this->updatePayload('Neu'))
+            ->assertRedirect('/');
+
+        $this->assertSame('Neu', $this->healthForm->fresh()->nickname);
+    }
+
+    public function test_guest_with_wrong_personal_code_gets_no_access(): void
+    {
+        $this->from('/')->post('/healthform', [
+            'camp_code' => $this->camp->code,
+            'code' => '999999',
+        ])->assertRedirect('/')->assertSessionHasErrors();
+
+        $this->get(route('healthform.show', $this->healthForm))->assertForbidden();
+    }
+
+    public function test_personal_code_does_not_work_with_code_of_other_camp(): void
+    {
+        $otherCamp = $this->createOtherCamp();
+
+        $this->from('/')->post('/healthform', [
+            'camp_code' => $otherCamp->code,
+            'code' => $this->healthForm->code,
+        ])->assertRedirect('/')->assertSessionHasErrors();
+
+        $this->get(route('healthform.show', $this->healthForm))->assertForbidden();
+    }
+
+    public function test_codes_of_one_health_form_do_not_unlock_another(): void
+    {
+        $otherHealthForm = HealthForm::where('camp_id', $this->camp->id)
+            ->where('id', '<>', $this->healthForm->id)
+            ->firstOrFail();
+
+        $this->post('/healthform', [
+            'camp_code' => $this->camp->code,
+            'code' => $this->healthForm->code,
+        ])->assertOk();
+
+        $this->get(route('healthform.show', $otherHealthForm))->assertForbidden();
+    }
+
+    public function test_manager_of_same_camp_can_show_health_form(): void
+    {
+        $manager = User::factory()->create([
+            'role_id' => config('status.role_Lagerleiter'),
+            'camp_id' => $this->camp->id,
+        ]);
+
+        $this->actingAs($manager)->get(route('healthform.show', $this->healthForm))->assertOk();
+    }
+
+    public function test_manager_of_other_camp_cannot_show_health_form(): void
+    {
+        $manager = User::factory()->create([
+            'role_id' => config('status.role_Lagerleiter'),
+            'camp_id' => $this->createOtherCamp()->id,
+        ]);
+
+        $this->actingAs($manager)->get(route('healthform.show', $this->healthForm))->assertForbidden();
+    }
+
+    public function test_helper_of_same_camp_cannot_show_health_form(): void
+    {
+        $helper = User::factory()->create([
+            'role_id' => config('status.role_Helfer'),
+            'camp_id' => $this->camp->id,
+        ]);
+
+        $this->actingAs($helper)->get(route('healthform.show', $this->healthForm))->assertForbidden();
+    }
+
+    private function createOtherCamp(): Camp
+    {
+        return Camp::create([
+            'name' => 'Anderes Lager',
+            'code' => 5678,
+            'user_id' => 1,
+            'finish' => false,
+            'counter' => 0,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function updatePayload(string $nickname): array
+    {
+        return [
+            'submit_btn' => 'Speichern',
+            'healthform' => ['nickname' => $nickname],
+            'healthinfo' => [],
+        ];
+    }
+}

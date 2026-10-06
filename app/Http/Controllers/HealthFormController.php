@@ -15,19 +15,26 @@ use App\Models\Help;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Ixudra\Curl\Facades\Curl;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Shared\Date;
 use Validator;
 use Yajra\DataTables\Facades\DataTables;
 
 class HealthFormController extends Controller
 {
     /**
+     * Session-Schlüssel mit den IDs der Gesundheitsblätter, die per Lager- und persönlichem Code freigeschaltet wurden.
+     */
+    private const UNLOCKED_HEALTH_FORMS = 'unlocked_health_forms';
+
+    /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -79,7 +86,7 @@ class HealthFormController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -101,7 +108,7 @@ class HealthFormController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -143,7 +150,7 @@ class HealthFormController extends Controller
             foreach ($importData_arr as &$importData) {
                 if (! empty($importData['geburtstag'])) {
                     if (is_numeric($importData['geburtstag'])) {
-                        $dayCarbon = Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($importData['geburtstag']));
+                        $dayCarbon = Carbon::instance(Date::excelToDateTimeObject($importData['geburtstag']));
                         $day = Carbon::parse($dayCarbon)->format('Y-m-d');
                         $importData['geburtstag'] = $day;
                     } else {
@@ -244,7 +251,7 @@ class HealthFormController extends Controller
 
     public function show(HealthForm $healthform)
     {
-        //
+        $this->authorizeHealthFormAccess($healthform);
         $healthinfo = Helper::getHealthInfo($healthform['code']);
         $title = 'Gesundheitsblatt anzeigen';
         $help = Help::where('title', $title)->first();
@@ -283,6 +290,7 @@ class HealthFormController extends Controller
 
     public function downloadPDF(HealthForm $healthform)
     {
+        $this->authorizeHealthFormAccess($healthform);
         $healthinfo = Helper::getHealthInfo($healthform['code']);
 
         return view('healthform.print', compact('healthform', 'healthinfo'));
@@ -306,15 +314,14 @@ class HealthFormController extends Controller
         if (isset($camp) && ($camp->count() > 0) && ! $camp['finish']) {
             //            $healthform = HealthForm::where('code', 'LIKE', '%' . Crypt::encrypt($input['code']) . '%')->first();
             $code = $input['code'];
-            $healthform = HealthForm::all()->filter(function ($record) use ($code) {
-                if ($record->code == $code) {
-                    return $record;
-                }
-            })->first();
+            $healthform = HealthForm::where('camp_id', $camp->id)->get()->first(function ($record) use ($code) {
+                return $record->code == $code;
+            });
             if ($healthform == null) {
                 return redirect()->to(url()->previous())
                     ->withErrors('Kein Gesundheitsblatt mit den Eingaben gefunden.')->withInput();
             }
+            $request->session()->push(self::UNLOCKED_HEALTH_FORMS, $healthform->id);
             $healthinfo = Helper::getHealthInfo($healthform['code']);
             $title = 'Hallo';
             $subtitle = ' '.$healthform['nickname'].' ('.$healthform['code'].')';
@@ -334,7 +341,7 @@ class HealthFormController extends Controller
 
     public function update(Request $request, HealthForm $healthform)
     {
-        //
+        $this->authorizeHealthFormAccess($healthform);
         $input = $request->all();
         if ($input['submit_btn'] == 'Gesundheitsblatt abschliessen') {
             $validator = Validator::make($request->all(), [
@@ -417,7 +424,8 @@ class HealthFormController extends Controller
 
     public function downloadAllergy(HealthForm $healthform)
     {
-        //
+        $this->authorizeHealthFormAccess($healthform);
+
         return response()->download(storage_path($healthform['file_allergies']));
     }
 
@@ -425,7 +433,7 @@ class HealthFormController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  \App\Models\Health_Form  $health_Form
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy(Health_Form $health_Form)
     {
@@ -445,5 +453,23 @@ class HealthFormController extends Controller
         $groups = Group::on('mysql_info')->search($request->get('term'))->get();
 
         return $groups;
+    }
+
+    /**
+     * Zugriff auf ein Gesundheitsblatt nur mit Lager- und persönlichem Code (Session)
+     * oder als Lagerleitung des Lagers, zu dem das Blatt gehört.
+     */
+    private function authorizeHealthFormAccess(HealthForm $healthform): void
+    {
+        if (in_array($healthform->id, session(self::UNLOCKED_HEALTH_FORMS, []), true)) {
+            return;
+        }
+
+        $user = Auth::user();
+        if ($user && $user->isManager() && $user->camp_id === $healthform->camp_id) {
+            return;
+        }
+
+        abort(403);
     }
 }
