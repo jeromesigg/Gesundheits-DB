@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Crypt;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\HealthForm>
+ * @extends Factory<HealthForm>
  */
 class HealthFormFactory extends Factory
 {

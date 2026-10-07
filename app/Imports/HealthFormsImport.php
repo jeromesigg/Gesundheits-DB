@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\HealthForm;
+use Illuminate\Database\Eloquent\Model;
 use Maatwebsite\Excel\Concerns\Importable;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithCalculatedFormulas;
@@ -13,7 +14,7 @@ class HealthFormsImport implements ToModel, WithCalculatedFormulas, WithHeadingR
     use Importable;
 
     /**
-     * @return \Illuminate\Database\Eloquent\Model|null
+     * @return Model|null
      */
     public function model(array $row)
     {
