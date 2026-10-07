@@ -38,6 +38,8 @@
         <!-- Zweite Verbindung mysql_info (Personendaten der Gesundheitsblätter) -->
         <env name="DB_CONNECTION_INFO" value="sqlite" force="true"/>
         <env name="DB_DATABASE_INFO" value=":memory:" force="true"/>
+        <!-- Ohne Absender schlägt jeder Mailversand fehl (.env.example hat MAIL_FROM_ADDRESS=null) -->
+        <env name="MAIL_FROM_ADDRESS" value="test@example.com" force="true"/>
         <!-- PermissionRoleSeeder legt den Admin mit diesem Passwort an -->
         <env name="ADMIN_PASSWORD" value="password" force="true"/>
     </php>

@@ -126,4 +126,19 @@ class PagesRenderTest extends TestCase
             ->assertOk()
             ->assertSee('Patientenakte öffnen');
     }
+
+    /**
+     * Der Cevi-DB-Import war nie angeschlossen ($has_api_token fehlte) und ist entfernt.
+     * Auch mit der alten Einstellung IMPORT_DB=true muss die Leiter-Seite laden.
+     */
+    public function test_users_page_has_no_cevi_db_import(): void
+    {
+        $scenario = CampScenario::create();
+        config(['app.import_db' => true]);
+
+        $this->actingAs($scenario->manager)
+            ->get(route('dashboard.users.index'))
+            ->assertOk()
+            ->assertDontSee('Personen aus Cevi-DB importieren');
+    }
 }

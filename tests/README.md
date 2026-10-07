@@ -27,6 +27,15 @@ vendor/bin/sail artisan test --compact --filter test_name   # einzelne Tests
 
 Ohne Sail gehen dieselben Befehle mit `php artisan test` bzw. `vendor/bin/phpunit`.
 
+```bash
+vendor/bin/pint --test   # Code-Stil prüfen
+vendor/bin/pint          # Code-Stil korrigieren
+```
+
+- **CI:** `.github/workflows/tests.yml` mit den Jobs `pint` und `phpunit`, bei Push auf `develop` und bei jedem Pull Request. Kein MySQL nötig, die Tests laufen mit `.env.example`.
+- **Code-Stil:** Laravel Pint mit Preset `laravel` (`pint.json`). Der Git-Hook `.githooks/pre-commit` formatiert gestagte PHP-Dateien beim Commit (aktiviert durch `composer install`). VS Code formatiert PHP beim Speichern (`.vscode/settings.json`, Erweiterung `open-southeners.laravel-pint`).
+- **Werte aus `.env.example`**, die Tests sonst stören, setzt `phpunit.xml` fest: `MAIL_FROM_ADDRESS`.
+
 - **Datenbank:** immer SQLite im Arbeitsspeicher, nie die Datenbank aus der `.env` (`tests/TestCase.php` bricht sonst ab). Das gilt für **beide** Verbindungen: die Standard-Verbindung und `mysql_info` (Personendaten der Gesundheitsblätter).
 
 ---
