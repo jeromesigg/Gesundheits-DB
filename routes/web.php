@@ -36,14 +36,14 @@ Route::get('healthform/searchajaxgroups', ['as' => 'searchajaxgroups', 'uses' =>
 Route::get('healthform/downloadAllergy/{healthform}', ['as' => 'downloadAllergy', 'uses' => 'HealthFormController@downloadAllergy']);
 
 Route::get('/loginLeiter', function () {
-    $user = User::where('username', 'leiter1@demo')->first();
+    $user = User::where('username', 'leiter1@demo')->firstOrFail();
     Auth::login($user);
 
     return redirect('dashboard');
 });
 
 Route::get('/loginLagerleiter', function () {
-    $user = User::where('username', 'lagerleiter@demo')->first();
+    $user = User::where('username', 'lagerleiter@demo')->firstOrFail();
     Auth::login($user);
 
     return redirect('dashboard');

@@ -106,7 +106,7 @@ class HealthInformationController extends Controller
         $input = $request->all();
         $healthinfo = null;
         $camp = Auth::user()->camp;
-        if ($input['code']) {
+        if (! empty($input['code'])) {
             $healthinfo = HealthInformation::where('code', '=', $input['code'])->where('camp_id', '=', $camp['id'])->first();
         }
         if ($healthinfo == null) {
@@ -152,6 +152,8 @@ class HealthInformationController extends Controller
     public function downloadProtocol(HealthInformation $healthinformation)
     {
         $this->authorizeCamp($healthinformation->camp_id);
+
+        abort_unless($healthinformation['file_protocol'] && file_exists(storage_path($healthinformation['file_protocol'])), 404);
 
         return response()->download(storage_path($healthinformation['file_protocol']));
     }

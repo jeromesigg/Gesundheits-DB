@@ -311,6 +311,9 @@ class HealthFormController extends Controller
         //
 
         $input = $request->all();
+        if (! $request->filled(['camp_code', 'code'])) {
+            return redirect('/');
+        }
         $camp = Camp::where('code', $input['camp_code'])->first();
         if (isset($camp) && ($camp->count() > 0) && ! $camp['finish']) {
             //            $healthform = HealthForm::where('code', 'LIKE', '%' . Crypt::encrypt($input['code']) . '%')->first();
@@ -426,6 +429,8 @@ class HealthFormController extends Controller
     public function downloadAllergy(HealthForm $healthform)
     {
         $this->authorizeHealthFormAccess($healthform);
+
+        abort_unless($healthform['file_allergies'] && file_exists(storage_path($healthform['file_allergies'])), 404);
 
         return response()->download(storage_path($healthform['file_allergies']));
     }

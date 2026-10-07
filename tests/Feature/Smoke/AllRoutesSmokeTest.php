@@ -31,15 +31,7 @@ class AllRoutesSmokeTest extends TestCase
      * Ist einer behoben, schlägt der Test fehl, bis der Eintrag hier entfernt ist.
      */
     private const KNOWN_ISSUES = [
-        'healthform' => ['roles' => ['guest', 'participant', 'helper', 'manager', 'admin'], 'reason' => 'GET ohne camp_code/code: Undefined array key'],
-        'loginLeiter' => ['roles' => ['guest', 'participant', 'helper', 'manager', 'admin'], 'reason' => 'Demo-User fehlt (DemoCampSeeder nicht gelaufen): Auth::login(null)'],
-        'loginLagerleiter' => ['roles' => ['guest', 'participant', 'helper', 'manager', 'admin'], 'reason' => 'Demo-User fehlt (DemoCampSeeder nicht gelaufen): Auth::login(null)'],
-        'healthinformation/search' => ['roles' => ['helper', 'manager', 'admin'], 'reason' => 'ohne ?code: Undefined array key'],
-        'interventions/createDataTables' => ['roles' => ['helper', 'manager', 'admin'], 'reason' => 'ohne ?filter: Undefined array key'],
-        'interventions/addNew' => ['roles' => ['helper', 'manager', 'admin'], 'reason' => 'ohne ?healthInformation_id: Undefined array key'],
-        'interventions/closeAjax' => ['roles' => ['helper', 'manager', 'admin'], 'reason' => 'Bedingung verkehrt: findOrFail nur, wenn intervention_id fehlt'],
-        'healthform/downloadAllergy/{healthform}' => ['roles' => ['manager', 'admin'], 'reason' => 'kein Allergiepass hochgeladen: Download von storage_path(null)'],
-        'healthinformation/downloadProtocol/{healthinformation}' => ['roles' => ['manager', 'admin'], 'reason' => 'kein Protokoll hochgeladen: Download von storage_path(null)'],
+        // 'route/{uri}' => ['roles' => ['rolle'], 'reason' => 'Warum es (noch) kracht'],
     ];
 
     /**

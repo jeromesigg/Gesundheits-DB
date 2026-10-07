@@ -4,7 +4,7 @@
 
 > **Beim Hinzufügen eines Tests bitte diese Datei ergänzen**, siehe [Neuen Test schreiben](#neuen-test-schreiben).
 
-Stand 06.10.2026: **92 Testfälle in 12 Dateien**, Laufzeit rund 3 Sekunden.
+Stand 06.10.2026: **154 Testfälle in 16 Dateien**, Laufzeit rund 4 Sekunden.
 Aktuelle Zahlen: `vendor/bin/phpunit --list-tests`
 
 ## Inhalt
@@ -79,13 +79,17 @@ Ohne Sail gehen dieselben Befehle mit `php artisan test` bzw. `vendor/bin/phpuni
 |---|---|---:|---|
 | Grundlagen | `TestInfrastructureTest` | 7 | Test-DB, Seeder, Szenario, Seitenaufruf über den ganzen Stack |
 | Smoke | `Smoke/AllRoutesSmokeTest` | 5 | Jede GET-Route pro Rolle (Gast, Teilnehmende, Helfende, Lagerleitung, Admin) ohne Serverfehler |
+| Smoke | `Smoke/PagesRenderTest` | 47 | Alle verlinkten Seiten pro Rolle mit 200, Navigation pro Rolle |
 | Sicherheit | `Security/CampAccessTest` | 49 | Gesundheitsdaten nur für Helfende+ und nur im eigenen Lager |
 | Sicherheit | `Security/AdminRoutesTest` | 8 | Wartungsrouten nur für Admins, gefährliche Routen entfernt |
 | Models | `Models/RoleTest` | 1 | Rollen-Prüfungen liefern Booleans |
 | Seeder | `Seeders/PermissionRoleSeederTest` | 1 | Admin-Passwort kommt aus der Config |
-| Gesundheitsblatt | `HealthForm/HealthFormAccessTest` | 11 | Zugriff nur mit Lager- und persönlichem Code oder als Lagerleitung |
+| Gesundheitsblatt | `HealthForm/HealthFormAccessTest` | 13 | Zugriff nur mit Lager- und persönlichem Code oder als Lagerleitung |
 | Gesundheitsblatt | `User/UserTest` | 2 | Öffnen des Gesundheitsblatts mit Codes |
 | Login | `Auth/LoginTest` | 3 | Login mit richtigen/falschen Daten |
+| Login | `Auth/DemoLoginTest` | 4 | Demo-Logins mit und ohne Demo-Daten |
+| Interventionen | `Intervention/InterventionRequestTest` | 5 | AJAX-Endpunkte mit fehlenden Parametern |
+| Gesundheitsinfos | `HealthInformation/HealthInformationRequestTest` | 4 | Suche nach Code, Protokoll-Download ohne Datei |
 | Registrierung | `Auth/RegistrationTest` | 3 | Registrierung, doppelte E-Mail, Passwort-Bestätigung |
 | Beispiele | `ExampleTest` (Feature, Unit) | 2 | Laravel-Beispiele |
 
@@ -108,7 +112,26 @@ Ohne Sail gehen dieselben Befehle mit `php artisan test` bzw. `vendor/bin/phpuni
 
 - Neue Routen werden automatisch mitgetestet. Fehlt ein Wert für einen Parameter, `routeParameters()` ergänzen.
 - `EXCLUDED`: Wartungsrouten und signierte URL, mit Begründung.
-- `KNOWN_ISSUES`: bekannte Serverfehler. Der Test ist rot, wenn ein neuer Fehler auftritt **oder** ein bekannter behoben ist (dann Eintrag entfernen).
+- `KNOWN_ISSUES`: bekannte Serverfehler (aktuell keine). Der Test ist rot, wenn ein neuer Fehler auftritt **oder** ein bekannter behoben ist (dann Eintrag entfernen).
+
+**[`PagesRenderTest`](Feature/Smoke/PagesRenderTest.php)**: alle Seiten, die Navigation (`components/navbar-*.blade.php`) und Dashboard einer Rolle verlinken.
+
+| Test | Prüft |
+|---|---|
+| `test_linked_page_renders_for_role` | Pro Rolle und Seite Status 200, inkl. Randfällen (Patientenakte ohne Interventionen, abgeschlossenes Blatt, Blatt ohne Gruppe) |
+| `test_navigation_shows_only_allowed_entries` | Jede Rolle sieht genau ihre Menüpunkte |
+| `test_dashboard_hides_health_record_search_from_participants` | Teilnehmende sehen auf dem Dashboard weder Suche noch Liste, sondern einen Hinweis |
+| `test_dashboard_shows_health_record_search_to_helpers` | Helfende sehen die Suche |
+
+### Robustheit
+
+**[`DemoLoginTest`](Feature/Auth/DemoLoginTest.php)**: `/loginLeiter` und `/loginLagerleiter` loggen mit `DemoCampSeeder` den Demo-User ein; ohne Demo-Daten 404 statt Absturz.
+
+**[`InterventionRequestTest`](Feature/Intervention/InterventionRequestTest.php)**: DataTables ohne Filter, `addNew` ohne Parameter (422), `closeAjax`.
+
+**[`HealthInformationRequestTest`](Feature/HealthInformation/HealthInformationRequestTest.php)**: Suche ohne Code, mit eigenem und fremdem Code; Protokoll-Download ohne Datei (404).
+
+`HealthFormAccessTest` zusätzlich: `GET /healthform` ohne Codes leitet zur Startseite, Allergiepass-Download ohne Datei 404.
 
 ### Sicherheit
 

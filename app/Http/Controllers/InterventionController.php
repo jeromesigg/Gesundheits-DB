@@ -43,8 +43,8 @@ class InterventionController extends Controller
         //
         $camp = Auth::user()->camp;
         $input = $request->all();
-        $filter = $input['filter'] === 'master';
-        $healthinfo = HealthInformation::where('id', '=', $input['info'])->first();
+        $filter = $request->input('filter') === 'master';
+        $healthinfo = HealthInformation::where('id', '=', $request->input('info'))->first();
         $interventions = $camp->interventions()
             ->when($filter, function ($query) {
                 $query->whereNull('intervention_master_id');
@@ -132,14 +132,6 @@ class InterventionController extends Controller
 
     public function closeAjax(Request $request)
     {
-        $input = $request->all();
-        if (! isset($input['intervention_id'])) {
-            $intervention = Intervention::findOrFail($input['intervention_id']);
-            if (! isset($intervention['date_close'])) {
-                $intervention['date_close'] = Carbon::now()->toDateString();
-                $intervention['time_close'] = Carbon::now()->toTimeString();
-            }
-        }
         $component = new InterventionClose(true);
 
         return $component->render()->with(['close' => true]);
@@ -161,8 +153,10 @@ class InterventionController extends Controller
 
     public function addNew(Request $request)
     {
-        //
-        $input = $request->all();
+        $input = $request->validate([
+            'healthInformation_id' => 'required',
+            'index' => 'required',
+        ]);
         $health_status = HealthStatus::pluck('name', 'id')->all();
         $intervention = new Intervention([
             'health_information_id' => $input['healthInformation_id'],

@@ -112,6 +112,18 @@ class HealthFormAccessTest extends TestCase
         $this->actingAs($this->scenario->helper)->get(route('healthform.show', $this->healthForm))->assertForbidden();
     }
 
+    public function test_entry_without_codes_redirects_to_start_page(): void
+    {
+        $this->get('/healthform')->assertRedirect('/');
+    }
+
+    public function test_download_allergy_without_file_returns_not_found(): void
+    {
+        $this->actingAs($this->scenario->manager)
+            ->get(route('downloadAllergy', $this->healthForm))
+            ->assertNotFound();
+    }
+
     /**
      * @return array<string, mixed>
      */
