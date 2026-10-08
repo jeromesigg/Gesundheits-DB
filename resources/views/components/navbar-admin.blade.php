@@ -20,6 +20,9 @@
                 <li>
                     <a class="nav-link" href="{{route('helps.index')}}">Hilfe-Artikel</a>
                 </li>
+                <li>
+                    <a class="nav-link" href="{{route('admin.maintenance')}}">Wartung</a>
+                </li>
         </ul>
     </div>
 @endif

@@ -22,8 +22,6 @@ class AllRoutesSmokeTest extends TestCase
      */
     private const EXCLUDED = [
         'email/verify/{id}/{hash}' => 'signierte URL',
-        'admin/run-migrations' => 'führt Migrationen aus, getestet in Security/AdminRoutesTest',
-        'admin/run-deployment' => 'leert alle Caches, getestet in Security/AdminRoutesTest',
     ];
 
     /**

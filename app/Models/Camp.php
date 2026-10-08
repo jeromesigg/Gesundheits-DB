@@ -15,13 +15,21 @@ class Camp extends Model
         parent::boot();
 
         // here assign this team to a global user with global default role
+        // Alle Admins des Global-Camps werden Admin im neuen Lager.
         self::created(function (Camp $camp) {
-            // get the admin user and assign roles/permissions on new team model
-            CampUser::create([
-                'user_id' => 1,
-                'role_id' => UserRole::Administrator,
-                'camp_id' => $camp['id'],
-            ]);
+            $globalCamp = Camp::where('global_camp', true)->whereKeyNot($camp->id)->first();
+            if ($globalCamp === null) {
+                return;
+            }
+            $adminIds = CampUser::where('camp_id', $globalCamp->id)
+                ->where('role_id', UserRole::Administrator)
+                ->pluck('user_id');
+            foreach ($adminIds as $adminId) {
+                CampUser::firstOrCreate(
+                    ['camp_id' => $camp->id, 'user_id' => $adminId],
+                    ['role_id' => UserRole::Administrator],
+                );
+            }
         });
     }
 

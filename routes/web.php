@@ -3,7 +3,6 @@
 use App\Http\Controllers\HomeController;
 use App\Models\Camp;
 use App\Models\User;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -111,14 +110,8 @@ Route::group(['middleware' => 'verified'], function () {
         // Route::resource('dashboard/interventionclasses', 'InterventionClassController');
         Route::post('healthforms/{healthform}/newCode', ['as' => 'healthforms.newCode', 'uses' => 'HealthFormController@newCode']);
 
-        Route::get('admin/run-migrations', function () {
-            return Artisan::call('migrate', ['--force' => true]);
-        });
-
-        Route::get('admin/run-deployment', function () {
-            Artisan::call('optimize:clear');
-
-            return true;
-        });
+        Route::get('admin/maintenance', ['as' => 'admin.maintenance', 'uses' => 'MaintenanceController@index']);
+        Route::post('admin/maintenance/migrate', ['as' => 'admin.maintenance.migrate', 'uses' => 'MaintenanceController@migrate']);
+        Route::post('admin/maintenance/clear-cache', ['as' => 'admin.maintenance.clearCache', 'uses' => 'MaintenanceController@clearCache']);
     });
 });

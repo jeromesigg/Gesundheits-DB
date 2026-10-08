@@ -4,7 +4,7 @@
 
 > **Beim Hinzufügen eines Tests bitte diese Datei ergänzen**, siehe [Neuen Test schreiben](#neuen-test-schreiben).
 
-Stand 08.10.2026: **261 Testfälle in 36 Dateien**, Laufzeit rund 8 Sekunden.
+Stand 08.10.2026: **271 Testfälle in 37 Dateien**, Laufzeit rund 8 Sekunden.
 Aktuelle Zahlen: `vendor/bin/phpunit --list-tests`
 
 ## Inhalt
@@ -97,7 +97,7 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Sicherheit | `Security/FileAccessTest` | 4 | Downloads nur aus `storage/app/files`, Gesundheitsblatt erstellen nur mit Formularfeldern |
 | Sicherheit | `Security/QuestionAccessTest` | 3 | Individuelle Fragen nur im eigenen Lager, nur Formularfelder |
 | Sicherheit | `Security/RemovedFeaturesTest` | 2 | Entfernter Cevi-DB-Import der Gesundheitsblätter bleibt entfernt |
-| Sicherheit | `Security/AdminRoutesTest` | 8 | Wartungsrouten nur für Admins, gefährliche Routen entfernt |
+| Sicherheit | `Security/AdminRoutesTest` | 14 | Wartungs-Dashboard nur für Admins, Aktionen nur per POST, alte GET-Routen entfernt |
 | Models | `Models/RoleTest` | 1 | Rollen-Prüfungen liefern Booleans |
 | Seeder | `Seeders/PermissionRoleSeederTest` | 1 | Admin-Passwort kommt aus der Config |
 | Gesundheitsblatt | `HealthForm/HealthFormAccessTest` | 13 | Zugriff nur mit Lager- und persönlichem Code oder als Lagerleitung |
@@ -113,6 +113,7 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Gesundheitsblatt | `HealthForm/HealthFormImportTest` | 4 | Import der ausgefüllten Vorlage `public/files/vorlage.xlsx` |
 | Gesundheitsblatt | `HealthForm/HealthFormExportTest` | 3 | Export nur mit Blättern des eigenen Lagers |
 | Interventionen | `Intervention/InterventionWorkflowTest` | 5 | Folge-Interventionen, Abschliessen, Status (Ampel) |
+| Lager | `Camp/CampAdminsTest` | 4 | Admins des Global-Camps werden Admin in neuen Lagern |
 | Lager | `Camp/CampDeleteTest` | 2 | Lager löschen: Daten und Uploads nur dieses Lagers, Zähler auf der Startseite |
 | Gesundheitsblatt | `HealthForm/ParticipantFlowTest` | 6 | Ablauf der Teilnehmenden: Fehler führen zurück zum eigenen Formular, Schreibschutz abgeschlossener Blätter |
 | Fragen | `Question/QuestionTest` | 2 | Neue Frage erscheint auch in bestehenden Gesundheitsblättern |
@@ -187,6 +188,8 @@ Feste IDs stehen als Enums in `app/Enums` (früher `config/status.php`, gelösch
 
 **[`InterventionWorkflowTest`](Feature/Intervention/InterventionWorkflowTest.php)**: Folge-Interventionen nummeriert pro Master (`max_serial_number`), mehrere Nachträge auf einmal, Status des Masters = Status der neusten Folge-Intervention, Abschliessen des Masters schliesst offene Folge-Interventionen mit denselben Angaben.
 
+**[`CampAdminsTest`](Feature/Camp/CampAdminsTest.php)**: Beim Anlegen eines Lagers bekommen alle Personen mit Admin-Rolle im Global-Camp eine Admin-Mitgliedschaft (`Camp::created`, früher fest User 1). Der Seeder trägt den ersten Admin selbst im Global-Camp ein.
+
 **[`CampDeleteTest`](Feature/Camp/CampDeleteTest.php)**: Gesundheitsinfos, Blätter, Interventionen, Mitgliedschaften und Upload-Ordner des Lagers werden gelöscht, andere Lager bleiben; das Lager bleibt als abgeschlossen mit Anzahl Blätter für die Statistik der Startseite.
 
 **[`ParticipantFlowTest`](Feature/HealthForm/ParticipantFlowTest.php)**: Scheitert die Validierung, leitet `HealthFormUpdateRequest` auf `/healthform?form=<id>`; das Blatt erscheint wieder mit Fehlern und den bisherigen Eingaben (`old()` in `components/forms/text*.blade.php`), auch wenn mehrere Blätter freigeschaltet sind. Ohne Freischaltung oder bei beendetem Lager: Startseite. Abgeschlossene Blätter sind nur lesbar, wenn das Lager „Abgeschlossene Blätter schliessen“ (`forms_finished`) gesetzt hat.
@@ -248,14 +251,7 @@ Feste IDs stehen als Enums in `app/Enums` (früher `config/status.php`, gelösch
 
 **[`RemovedFeaturesTest`](Feature/Security/RemovedFeaturesTest.php)**: Der Cevi-DB-Import der Gesundheitsblätter (`POST dashboard/healthforms/import`) rief mit dem Server-Token `db.cevi.ch` auf und legte Blätter ohne Lager an. Route, Methode und Modal sind entfernt; der Test verhindert mit `Http::preventStrayRequests()` echte Anfragen nach aussen. Das Paket `ixudra/curl` ist entfernt.
 
-**[`AdminRoutesTest`](Feature/Security/AdminRoutesTest.php)**: die Wartungsrouten `admin/run-*` führen Artisan-Befehle aus. Artisan ist im Test gefakt.
-
-| Test | Prüft |
-|---|---|
-| `test_guest_cannot_run_maintenance_command` | Gäste werden umgeleitet, kein Befehl läuft |
-| `test_manager_cannot_run_maintenance_command` | Lagerleitung wird auf `/dashboard` umgeleitet, kein Befehl läuft |
-| `test_admin_can_run_maintenance_command` | Admin löst genau den erwarteten Befehl aus |
-| `test_removed_route_does_not_exist_for_admins` | `run-migrations-seed` (`migrate:refresh`, löschte alle Daten) und `run-seeding` (erfundene Interventionen) gibt es nicht mehr, auch nicht für Admins |
+**[`AdminRoutesTest`](Feature/Security/AdminRoutesTest.php)**: Wartung über `GET /admin/maintenance` (Menü Admin → Wartung): zeigt offene Migrationen, Buttons „Migrationen ausführen“ und „Caches leeren“ senden POST (CSRF-geschützt). Gäste und Lagerleitung werden umgeleitet, GET auf die Aktionen gibt 405, die früheren GET-Routen `admin/run-*` gibt es nicht mehr. Artisan ist im Test gefakt.
 
 ### Models und Seeder
 
@@ -325,9 +321,9 @@ Registrierung ist offen und jede Person kann ein eigenes Lager anlegen (wird dor
 
 Umsetzung: `App\Policies\CampPolicy` (`manage`, `switchTo`), `App\Policies\UserPolicy` (`updateProfile`, `manage`), Form Requests in `app/Http/Requests`.
 
-### Wartungsrouten `admin/run-*`
+### Wartung
 
-Nur eingeloggte, verifizierte Admins (`run-migrations`, `run-deployment`). Lagerleitung und Gäste werden umgeleitet. `run-migrations-seed` und `run-seeding` sind entfernt.
+Nur Admins, Aktionen nur per POST über das Wartungs-Dashboard (`MaintenanceController`). Keine Wartung per GET-URL.
 
 ---
 
