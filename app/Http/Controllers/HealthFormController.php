@@ -115,13 +115,8 @@ class HealthFormController extends Controller
         $input['code'] = Crypt::encryptString($code);
         $input['camp_id'] = $camp['id'];
         $healthform = HealthForm::create($input);
-        $healthinfo = HealthInformation::create(['code' => $code, 'camp_id' => $camp['id']]);
+        $healthinfo = Helper::createHealthInformation($camp, $code);
         Helper::updateGroup($healthform, $input['group_text'] ?? null);
-        $questions = $camp->questions;
-        foreach ($questions as $question) {
-            HealthInformationQuestion::create(['question_id' => $question['id'],
-                'health_information_id' => $healthinfo['id']]);
-        }
         if ($camp['independent_form_fill']) {
             $title = 'Gesundheitsblätter';
             $help = Help::where('title', $title)->first();
@@ -182,8 +177,10 @@ class HealthFormController extends Controller
                         'group_text' => $importData_row['abteilung'],
                         'camp_id' => $camp['id'],
                     ];
-                    HealthForm::firstOrCreate(['ahv' => $importData_row['ahv_nr'], 'camp_id' => $camp['id']], $insertData);
-                    HealthInformation::firstOrCreate(['code' => $code, 'camp_id' => $camp['id']]);
+                    $healthform = HealthForm::firstOrCreate(['ahv' => trim($importData_row['ahv_nr']), 'camp_id' => $camp['id']], $insertData);
+                    if ($healthform->wasRecentlyCreated) {
+                        Helper::createHealthInformation($camp, $code);
+                    }
                 }
             }
         }
@@ -205,7 +202,7 @@ class HealthFormController extends Controller
 
     public function downloadFile()
     {
-        return Excel::download(new HealthFormsExport, 'Teilnehmerliste.xlsx');
+        return Excel::download(new HealthFormsExport(Auth::user()->camp), 'Teilnehmerliste.xlsx');
     }
 
     public function show(HealthForm $healthform)

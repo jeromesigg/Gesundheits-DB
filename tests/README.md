@@ -4,7 +4,7 @@
 
 > **Beim Hinzufügen eines Tests bitte diese Datei ergänzen**, siehe [Neuen Test schreiben](#neuen-test-schreiben).
 
-Stand 08.10.2026: **220 Testfälle in 28 Dateien**, Laufzeit rund 7 Sekunden.
+Stand 08.10.2026: **237 Testfälle in 33 Dateien**, Laufzeit rund 8 Sekunden.
 Aktuelle Zahlen: `vendor/bin/phpunit --list-tests`
 
 ## Inhalt
@@ -106,6 +106,11 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Login | `Auth/DemoLoginTest` | 4 | Demo-Logins mit und ohne Demo-Daten |
 | Interventionen | `Intervention/InterventionRequestTest` | 5 | AJAX-Endpunkte mit fehlenden Parametern |
 | Interventionen | `Intervention/InterventionStoreTest` | 5 | Speichern: nur Formularfelder, Nummern/Zuordnung/Bildpfad vom Server |
+| Gesundheitsblatt | `HealthForm/HealthFormCreateTest` | 3 | Lagerleitung erstellt Blatt: Code, Gesundheitsinfo, Fragen |
+| Gesundheitsblatt | `HealthForm/HealthFormImportTest` | 4 | Import der ausgefüllten Vorlage `public/files/vorlage.xlsx` |
+| Gesundheitsblatt | `HealthForm/HealthFormExportTest` | 3 | Export nur mit Blättern des eigenen Lagers |
+| Interventionen | `Intervention/InterventionWorkflowTest` | 5 | Folge-Interventionen, Abschliessen, Status (Ampel) |
+| Lager | `Camp/CampDeleteTest` | 2 | Lager löschen: Daten und Uploads nur dieses Lagers, Zähler auf der Startseite |
 | Gesundheitsblatt | `HealthForm/ParticipantFlowTest` | 6 | Ablauf der Teilnehmenden: Fehler führen zurück zum eigenen Formular, Schreibschutz abgeschlossener Blätter |
 | Fragen | `Question/QuestionTest` | 2 | Neue Frage erscheint auch in bestehenden Gesundheitsblättern |
 | Tasks | `Console/DailyTaskTest` | 3 | `task:daily` täglich 3 Uhr, setzt nur das Demo-Lager zurück |
@@ -153,6 +158,16 @@ vendor/bin/pint          # Code-Stil korrigieren
 **[`HealthInformationRequestTest`](Feature/HealthInformation/HealthInformationRequestTest.php)**: Suche ohne Code, mit eigenem und fremdem Code; Protokoll-Download ohne Datei (404).
 
 `HealthFormAccessTest` zusätzlich: `GET /healthform` ohne Codes leitet zur Startseite, Allergiepass-Download ohne Datei 404.
+
+**[`HealthFormCreateTest`](Feature/HealthForm/HealthFormCreateTest.php)**: 6-stelliger Code, Gesundheitsinfo im selben Lager mit den Fragen des Lagers (`Helper::createHealthInformation`); bei „Teilnehmende füllen selbst aus“ zurück zur Liste.
+
+**[`HealthFormImportTest`](Feature/HealthForm/HealthFormImportTest.php)**: Füllt die echte Vorlage aus und lädt sie hoch. Excel-Datum und Text-Datum, Ceviname fällt auf Vorname zurück, Abteilung über Kurzname; Zeilen ohne AHV oder Geburtstag werden übersprungen; ein zweiter Import derselben Liste erzeugt nichts Neues (vorher: verwaiste Gesundheitsinfos); importierte Blätter bekommen die Fragen des Lagers.
+
+**[`HealthFormExportTest`](Feature/HealthForm/HealthFormExportTest.php)**: `HealthFormsExport` bekommt das Lager; vorher enthielt der Export die Blätter **aller** Lager (Namen, AHV, Codes).
+
+**[`InterventionWorkflowTest`](Feature/Intervention/InterventionWorkflowTest.php)**: Folge-Interventionen nummeriert pro Master (`max_serial_number`), mehrere Nachträge auf einmal, Status des Masters = Status der neusten Folge-Intervention, Abschliessen des Masters schliesst offene Folge-Interventionen mit denselben Angaben.
+
+**[`CampDeleteTest`](Feature/Camp/CampDeleteTest.php)**: Gesundheitsinfos, Blätter, Interventionen, Mitgliedschaften und Upload-Ordner des Lagers werden gelöscht, andere Lager bleiben; das Lager bleibt als abgeschlossen mit Anzahl Blätter für die Statistik der Startseite.
 
 **[`ParticipantFlowTest`](Feature/HealthForm/ParticipantFlowTest.php)**: Scheitert die Validierung, leitet `HealthFormUpdateRequest` auf `/healthform?form=<id>`; das Blatt erscheint wieder mit Fehlern und den bisherigen Eingaben (`old()` in `components/forms/text*.blade.php`), auch wenn mehrere Blätter freigeschaltet sind. Ohne Freischaltung oder bei beendetem Lager: Startseite. Abgeschlossene Blätter sind nur lesbar, wenn das Lager „Abgeschlossene Blätter schliessen“ (`forms_finished`) gesetzt hat.
 

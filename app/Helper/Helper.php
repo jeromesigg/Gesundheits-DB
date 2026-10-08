@@ -7,6 +7,7 @@ use App\Models\CampUser;
 use App\Models\Group;
 use App\Models\HealthForm;
 use App\Models\HealthInformation;
+use App\Models\HealthInformationQuestion;
 use App\Models\HealthStatus;
 use App\Models\Help;
 use App\Models\Intervention;
@@ -77,6 +78,22 @@ class Helper
         } while (HealthInformation::where('code', '=', $code)->first());
 
         return $code;
+    }
+
+    /**
+     * Medizinischer Teil eines neuen Gesundheitsblatts, mit leeren Antworten auf die aktiven Fragen des Lagers.
+     */
+    public static function createHealthInformation(Camp $camp, int $code): HealthInformation
+    {
+        $healthInformation = HealthInformation::create(['code' => $code, 'camp_id' => $camp->id]);
+        foreach ($camp->questions as $question) {
+            HealthInformationQuestion::create([
+                'question_id' => $question->id,
+                'health_information_id' => $healthInformation->id,
+            ]);
+        }
+
+        return $healthInformation;
     }
 
     public static function generateUniqueCampCode(): int
