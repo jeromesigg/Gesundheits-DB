@@ -4,7 +4,7 @@
 
 > **Beim Hinzufügen eines Tests bitte diese Datei ergänzen**, siehe [Neuen Test schreiben](#neuen-test-schreiben).
 
-Stand 06.10.2026: **154 Testfälle in 16 Dateien**, Laufzeit rund 4 Sekunden.
+Stand 07.10.2026: **185 Testfälle in 20 Dateien**, Laufzeit rund 5 Sekunden.
 Aktuelle Zahlen: `vendor/bin/phpunit --list-tests`
 
 ## Inhalt
@@ -90,6 +90,10 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Smoke | `Smoke/AllRoutesSmokeTest` | 5 | Jede GET-Route pro Rolle (Gast, Teilnehmende, Helfende, Lagerleitung, Admin) ohne Serverfehler |
 | Smoke | `Smoke/PagesRenderTest` | 47 | Alle verlinkten Seiten pro Rolle mit 200, Navigation pro Rolle |
 | Sicherheit | `Security/CampAccessTest` | 49 | Gesundheitsdaten nur für Helfende+ und nur im eigenen Lager |
+| Sicherheit | `Security/ProfileTest` | 6 | Profil: nur eigenes Konto, nur E-Mail und Passwort |
+| Sicherheit | `Security/CampSwitchTest` | 4 | Lagerwechsel nur mit aktiver Mitgliedschaft |
+| Sicherheit | `Security/UserManagementTest` | 14 | Leitende verwalten: nur eigenes Lager, nie Admins, erlaubte Rollen |
+| Sicherheit | `Security/CampManagementTest` | 6 | Lager bearbeiten/löschen nur als Lagerleitung dieses Lagers |
 | Sicherheit | `Security/AdminRoutesTest` | 8 | Wartungsrouten nur für Admins, gefährliche Routen entfernt |
 | Models | `Models/RoleTest` | 1 | Rollen-Prüfungen liefern Booleans |
 | Seeder | `Seeders/PermissionRoleSeederTest` | 1 | Admin-Passwort kommt aus der Config |
@@ -158,6 +162,24 @@ vendor/bin/pint          # Code-Stil korrigieren
 | `test_helper_can_store_intervention_for_own_camp` | Normalfall funktioniert |
 | `test_manager_cannot_reopen_health_form_of_other_camp`, `test_manager_cannot_upload_protocol_for_other_camp` | Aktionen der Lagerleitung nur im eigenen Lager |
 
+**[`ProfileTest`](Feature/Security/ProfileTest.php)**: `PATCH /user/{user}` ändert nur das eigene Konto (sonst 403) und nur E-Mail und Passwort; `role_id`, `camp_id`, `demo` werden ignoriert. Das Profilformular sendet an diese Route (vorher an die Route der Lagerleitung, Helfende konnten ihr Passwort nicht ändern).
+
+**[`CampSwitchTest`](Feature/Security/CampSwitchTest.php)**: `PATCH /camps/{camp}` wechselt nur in Lager mit aktiver Mitgliedschaft und ins Global-Camp; die Rolle kommt aus der Mitgliedschaft. Es wird keine Mitgliedschaft mehr nebenbei angelegt.
+
+**[`UserManagementTest`](Feature/Security/UserManagementTest.php)**: Leitende verwalten (`dashboard/users`).
+
+| Test | Prüft |
+|---|---|
+| `test_manager_can_update_member_including_password` | Lagerleitung darf Mitglieder bearbeiten, auch das Passwort |
+| `test_manager_can_change_role_of_member_within_camp`, `test_role_change_does_not_touch_current_role_in_another_camp` | Rolle wird in der Mitgliedschaft gespeichert; die aktuelle Rolle nur, wenn die Person gerade in diesem Lager ist |
+| `test_manager_cannot_grant_admin_role`, `test_add_cannot_grant_admin_role`, `test_store_creates_user_with_allowed_role_only` | Nie Administrator vergeben |
+| `test_manager_cannot_edit_update_or_remove_user_of_other_camp` | Fremdes Lager: 403, nichts geändert |
+| `test_manager_cannot_edit_or_update_admin`, `test_manager_cannot_edit_admin_of_own_camp` | Admins sind tabu |
+| `test_store_ignores_other_fields` | Neue Person: nur Formularfelder |
+| `test_search_*` | Suche nur mit exakter E-Mail, ohne Admins und Mitglieder, nur `id`, `username`, `email` |
+
+**[`CampManagementTest`](Feature/Security/CampManagementTest.php)**: `dashboard/camps/{camp}` bearbeiten und löschen nur als Lagerleitung dieses Lagers (Mitgliedschaft, nicht aktuelle Rolle); nur Formularfelder (`global_camp`, `code`, `finish` usw. werden ignoriert); verantwortliche Person muss Lagerleitung des Lagers sein; beim Löschen wechseln nur Personen ins Global-Camp, die gerade in diesem Lager sind.
+
 **[`AdminRoutesTest`](Feature/Security/AdminRoutesTest.php)**: die Wartungsrouten `admin/run-*` führen Artisan-Befehle aus. Artisan ist im Test gefakt.
 
 | Test | Prüft |
@@ -219,6 +241,21 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Admin | alles im aktuell gewählten Lager | nein, erst nach Wechsel ins Lager |
 
 Umsetzung: Routen-Gruppen `helper`/`manager` in `routes/web.php`, Lager-Prüfung `Controller::authorizeCamp()`.
+
+### Konten und Lager
+
+Registrierung ist offen und jede Person kann ein eigenes Lager anlegen (wird dort Lagerleitung). Die Rolle Lagerleitung ist deshalb **nicht** vertrauenswürdig; alles ist auf das eigene Lager begrenzt.
+
+| Aktion | Regel |
+|---|---|
+| Profil ändern | Nur eigenes Konto, nur E-Mail und Passwort |
+| Lager wechseln | Nur mit aktiver Mitgliedschaft (`camp_users`) oder ins Global-Camp; Rolle aus der Mitgliedschaft |
+| Leitende verwalten (bearbeiten inkl. Passwort, entfernen) | Lagerleitung: nur Mitglieder des aktuellen Lagers, nie Admins |
+| Rollen vergeben | Nur Lagerleitung, Helfende, Teilnehmende (`Role::assignableIds()`) |
+| Lager bearbeiten/löschen | Nur als Lagerleitung (oder Admin) dieses Lagers laut Mitgliedschaft |
+| Personensuche | Nur exakte E-Mail-Adresse |
+
+Umsetzung: `App\Policies\CampPolicy` (`manage`, `switchTo`), `App\Policies\UserPolicy` (`updateProfile`, `manage`), Form Requests in `app/Http/Requests`.
 
 ### Wartungsrouten `admin/run-*`
 

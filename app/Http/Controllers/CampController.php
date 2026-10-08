@@ -112,6 +112,7 @@ class CampController extends Controller
     public function update(Request $request, Camp $camp)
     {
         //
+        $this->authorize('switchTo', $camp);
         if (! Auth::user()->demo) {
             Helper::updateCamp(Auth::user(), $camp);
         }
