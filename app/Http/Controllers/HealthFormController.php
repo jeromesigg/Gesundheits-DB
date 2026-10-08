@@ -272,9 +272,7 @@ class HealthFormController extends Controller
         if (isset($camp) && ($camp->count() > 0) && ! $camp['finish']) {
             //            $healthform = HealthForm::where('code', 'LIKE', '%' . Crypt::encrypt($input['code']) . '%')->first();
             $code = $input['code'];
-            $healthform = HealthForm::where('camp_id', $camp->id)->get()->first(function ($record) use ($code) {
-                return $record->code == $code;
-            });
+            $healthform = HealthForm::where('camp_id', $camp->id)->where('code_hash', HealthForm::hashCode($code))->first();
             if ($healthform == null) {
                 return redirect()->to(url()->previous())
                     ->withErrors('Kein Gesundheitsblatt mit den Eingaben gefunden.')->withInput();

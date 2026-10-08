@@ -19,30 +19,12 @@ class Helper
 {
     public static function getHealthInfo($code)
     {
-        $healthinfos = HealthInformation::get();
-        $healthinfo = null;
-        foreach ($healthinfos as $act_healthinfo) {
-            if ($code == $act_healthinfo['code']) {
-                $healthinfo = $act_healthinfo;
-                break;
-            }
-        }
-
-        return $healthinfo;
+        return HealthInformation::where('code', $code)->first();
     }
 
     public static function getHealthForm($code)
     {
-        $healthforms = HealthForm::get();
-        $healthform = null;
-        foreach ($healthforms as $act_healthform) {
-            if ($code == $act_healthform['code']) {
-                $healthform = $act_healthform;
-                break;
-            }
-        }
-
-        return $healthform;
+        return HealthForm::where('code_hash', HealthForm::hashCode($code))->first();
     }
 
     public static function updateGroup($master, $group_text)

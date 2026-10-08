@@ -4,7 +4,7 @@
 
 > **Beim Hinzufügen eines Tests bitte diese Datei ergänzen**, siehe [Neuen Test schreiben](#neuen-test-schreiben).
 
-Stand 08.10.2026: **237 Testfälle in 33 Dateien**, Laufzeit rund 8 Sekunden.
+Stand 08.10.2026: **242 Testfälle in 34 Dateien**, Laufzeit rund 8 Sekunden.
 Aktuelle Zahlen: `vendor/bin/phpunit --list-tests`
 
 ## Inhalt
@@ -106,6 +106,7 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Login | `Auth/DemoLoginTest` | 4 | Demo-Logins mit und ohne Demo-Daten |
 | Interventionen | `Intervention/InterventionRequestTest` | 5 | AJAX-Endpunkte mit fehlenden Parametern |
 | Interventionen | `Intervention/InterventionStoreTest` | 5 | Speichern: nur Formularfelder, Nummern/Zuordnung/Bildpfad vom Server |
+| Hilfen | `Helper/HealthFormLookupTest` | 5 | Suche nach persönlichem Code über `code_hash`, Nachtrag per Migration |
 | Gesundheitsblatt | `HealthForm/HealthFormCreateTest` | 3 | Lagerleitung erstellt Blatt: Code, Gesundheitsinfo, Fragen |
 | Gesundheitsblatt | `HealthForm/HealthFormImportTest` | 4 | Import der ausgefüllten Vorlage `public/files/vorlage.xlsx` |
 | Gesundheitsblatt | `HealthForm/HealthFormExportTest` | 3 | Export nur mit Blättern des eigenen Lagers |
@@ -158,6 +159,8 @@ vendor/bin/pint          # Code-Stil korrigieren
 **[`HealthInformationRequestTest`](Feature/HealthInformation/HealthInformationRequestTest.php)**: Suche ohne Code, mit eigenem und fremdem Code; Protokoll-Download ohne Datei (404).
 
 `HealthFormAccessTest` zusätzlich: `GET /healthform` ohne Codes leitet zur Startseite, Allergiepass-Download ohne Datei 404.
+
+**[`HealthFormLookupTest`](Feature/Helper/HealthFormLookupTest.php)**: `HealthForm.code` ist nicht deterministisch verschlüsselt; gesucht wird über `code_hash` (HMAC-SHA256 mit `APP_KEY`, gesetzt beim Speichern). `Helper::getHealthForm()` lädt nur noch das passende Blatt (vorher alle Blätter aller Lager, die Teilnehmerübersicht brauchte bei 500 Blättern ~7 s, jetzt ~0,3 s). Die Migration trägt den Hash für bestehende Blätter nach (`fillCodeHashes()`).
 
 **[`HealthFormCreateTest`](Feature/HealthForm/HealthFormCreateTest.php)**: 6-stelliger Code, Gesundheitsinfo im selben Lager mit den Fragen des Lagers (`Helper::createHealthInformation`); bei „Teilnehmende füllen selbst aus“ zurück zur Liste.
 

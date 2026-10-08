@@ -40,4 +40,22 @@ class HealthForm extends Model implements Auditable
     {
         return Crypt::decryptString($value);
     }
+
+    /**
+     * Suchbarer Hash des persönlichen Codes (der Code selbst ist nicht deterministisch verschlüsselt).
+     * Bei einem Wechsel des APP_KEY müssen Codes und Hashes neu erzeugt werden.
+     */
+    public static function hashCode(int|string $code): string
+    {
+        return hash_hmac('sha256', (string) $code, config('app.key'));
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (HealthForm $healthForm) {
+            if ($healthForm->isDirty('code')) {
+                $healthForm->code_hash = self::hashCode($healthForm->code);
+            }
+        });
+    }
 }
