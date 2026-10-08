@@ -6,6 +6,7 @@ use App\Exports\HealthFormsExport;
 use App\Helper\Helper;
 use App\Http\Requests\HealthFormUpdateRequest;
 use App\Http\Requests\ImportHealthFormsRequest;
+use App\Http\Requests\StoreHealthFormRequest;
 use App\Imports\HealthFormsImport;
 use App\Models\Camp;
 use App\Models\City;
@@ -106,17 +107,16 @@ class HealthFormController extends Controller
      *
      * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreHealthFormRequest $request)
     {
-        //
-        $input = $request->all();
+        $input = $request->validated();
         $code = Helper::generateUniqueCode();
         $camp = Auth::user()->camp;
         $input['code'] = Crypt::encryptString($code);
         $input['camp_id'] = $camp['id'];
         $healthform = HealthForm::create($input);
         $healthinfo = HealthInformation::create(['code' => $code, 'camp_id' => $camp['id']]);
-        Helper::updateGroup($healthform, $input['group_text']);
+        Helper::updateGroup($healthform, $input['group_text'] ?? null);
         $questions = $camp->questions;
         foreach ($questions as $question) {
             HealthInformationQuestion::create(['question_id' => $question['id'],
@@ -267,11 +267,9 @@ class HealthFormController extends Controller
 
     public function edit(Request $request)
     {
-        //
-
         $input = $request->all();
         if (! $request->filled(['camp_code', 'code'])) {
-            return redirect('/');
+            return $this->showUnlockedForm($request);
         }
         $camp = Camp::where('code', $input['camp_code'])->first();
         if (isset($camp) && ($camp->count() > 0) && ! $camp['finish']) {
@@ -285,17 +283,8 @@ class HealthFormController extends Controller
                     ->withErrors('Kein Gesundheitsblatt mit den Eingaben gefunden.')->withInput();
             }
             $request->session()->push(HealthFormPolicy::UNLOCKED_SESSION_KEY, $healthform->id);
-            $healthinfo = Helper::getHealthInfo($healthform['code']);
-            $title = 'Hallo';
-            $subtitle = ' '.$healthform['nickname'].' ('.$healthform['code'].')';
-            $help = Help::where('title', $title)->first();
-            if ($healthform['finish'] && $camp['forms_finished']) {
-                return view('healthform.show', compact('healthform', 'healthinfo', 'title', 'subtitle', 'help'));
-            } else {
-                $health_questions = $healthinfo->questions;
 
-                return view('healthform.edit', compact('healthform', 'healthinfo', 'health_questions', 'title', 'subtitle', 'help', 'camp'));
-            }
+            return $this->participantFormView($healthform, $camp);
         } else {
             return redirect()->to(url()->previous())
                 ->withErrors('Kein Gesundheitsblatt mit den Eingaben gefunden.')->withInput();
@@ -366,9 +355,10 @@ class HealthFormController extends Controller
     {
         $this->authorize('access', $healthform);
 
-        abort_unless($healthform['file_allergies'] && file_exists(storage_path($healthform['file_allergies'])), 404);
+        $path = Helper::uploadedFilePath($healthform['file_allergies']);
+        abort_if($path === null, 404);
 
-        return response()->download(storage_path($healthform['file_allergies']));
+        return response()->download($path);
     }
 
     /**
@@ -395,5 +385,41 @@ class HealthFormController extends Controller
         $groups = Group::on('mysql_info')->search($request->get('term'))->get();
 
         return $groups;
+    }
+
+    /**
+     * GET /healthform?form=...: ein in dieser Session per Codes freigeschaltetes Blatt erneut anzeigen
+     * (z. B. nach einem Validierungsfehler), solange das Lager läuft.
+     */
+    private function showUnlockedForm(Request $request)
+    {
+        $id = $request->query('form');
+        if (! in_array($id, session(HealthFormPolicy::UNLOCKED_SESSION_KEY, []), true)) {
+            return redirect('/');
+        }
+        $healthform = HealthForm::findOrFail($id);
+        $camp = Camp::findOrFail($healthform->camp_id);
+        if ($camp['finish']) {
+            return redirect('/');
+        }
+
+        return $this->participantFormView($healthform, $camp);
+    }
+
+    /**
+     * Formular für Teilnehmende; abgeschlossene Blätter nur lesend, wenn das Lager das so eingestellt hat.
+     */
+    private function participantFormView(HealthForm $healthform, Camp $camp)
+    {
+        $healthinfo = Helper::getHealthInfo($healthform['code']);
+        $title = 'Hallo';
+        $subtitle = ' '.$healthform['nickname'].' ('.$healthform['code'].')';
+        $help = Help::where('title', $title)->first();
+        if ($healthform['finish'] && $camp['forms_finished']) {
+            return view('healthform.show', compact('healthform', 'healthinfo', 'title', 'subtitle', 'help'));
+        }
+        $health_questions = $healthinfo->questions;
+
+        return view('healthform.edit', compact('healthform', 'healthinfo', 'health_questions', 'title', 'subtitle', 'help', 'camp'));
     }
 }

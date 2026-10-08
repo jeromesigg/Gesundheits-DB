@@ -42,6 +42,9 @@ class dailyTask extends Command
             'counter' => 0,
         ]);
         $camp = Camp::where('demo', true)->first();
+        if ($camp === null) {
+            return;
+        }
         $interventions = $camp->interventions()->get();
         foreach ($interventions as $intervention) {
             $intervention->update([

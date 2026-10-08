@@ -153,9 +153,10 @@ class HealthInformationController extends Controller
     {
         $this->authorizeCamp($healthinformation->camp_id);
 
-        abort_unless($healthinformation['file_protocol'] && file_exists(storage_path($healthinformation['file_protocol'])), 404);
+        $path = Helper::uploadedFilePath($healthinformation['file_protocol']);
+        abort_if($path === null, 404);
 
-        return response()->download(storage_path($healthinformation['file_protocol']));
+        return response()->download($path);
     }
 
     /**

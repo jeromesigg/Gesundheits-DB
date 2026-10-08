@@ -4,7 +4,7 @@
 
 > **Beim Hinzufügen eines Tests bitte diese Datei ergänzen**, siehe [Neuen Test schreiben](#neuen-test-schreiben).
 
-Stand 08.10.2026: **202 Testfälle in 23 Dateien**, Laufzeit rund 6 Sekunden.
+Stand 08.10.2026: **220 Testfälle in 28 Dateien**, Laufzeit rund 7 Sekunden.
 Aktuelle Zahlen: `vendor/bin/phpunit --list-tests`
 
 ## Inhalt
@@ -94,6 +94,8 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Sicherheit | `Security/CampSwitchTest` | 4 | Lagerwechsel nur mit aktiver Mitgliedschaft |
 | Sicherheit | `Security/UserManagementTest` | 14 | Leitende verwalten: nur eigenes Lager, nie Admins, erlaubte Rollen |
 | Sicherheit | `Security/CampManagementTest` | 6 | Lager bearbeiten/löschen nur als Lagerleitung dieses Lagers |
+| Sicherheit | `Security/FileAccessTest` | 4 | Downloads nur aus `storage/app/files`, Gesundheitsblatt erstellen nur mit Formularfeldern |
+| Sicherheit | `Security/QuestionAccessTest` | 3 | Individuelle Fragen nur im eigenen Lager, nur Formularfelder |
 | Sicherheit | `Security/RemovedFeaturesTest` | 2 | Entfernter Cevi-DB-Import der Gesundheitsblätter bleibt entfernt |
 | Sicherheit | `Security/AdminRoutesTest` | 8 | Wartungsrouten nur für Admins, gefährliche Routen entfernt |
 | Models | `Models/RoleTest` | 1 | Rollen-Prüfungen liefern Booleans |
@@ -104,6 +106,9 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Login | `Auth/DemoLoginTest` | 4 | Demo-Logins mit und ohne Demo-Daten |
 | Interventionen | `Intervention/InterventionRequestTest` | 5 | AJAX-Endpunkte mit fehlenden Parametern |
 | Interventionen | `Intervention/InterventionStoreTest` | 5 | Speichern: nur Formularfelder, Nummern/Zuordnung/Bildpfad vom Server |
+| Gesundheitsblatt | `HealthForm/ParticipantFlowTest` | 6 | Ablauf der Teilnehmenden: Fehler führen zurück zum eigenen Formular, Schreibschutz abgeschlossener Blätter |
+| Fragen | `Question/QuestionTest` | 2 | Neue Frage erscheint auch in bestehenden Gesundheitsblättern |
+| Tasks | `Console/DailyTaskTest` | 3 | `task:daily` täglich 3 Uhr, setzt nur das Demo-Lager zurück |
 | Gesundheitsblatt | `HealthForm/HealthFormUpdateTest` | 7 | Speichern und Abschliessen durch Teilnehmende, nur Formularfelder, Allergiepass |
 | Gesundheitsinfos | `HealthInformation/HealthInformationRequestTest` | 7 | Suche nach Code, Protokoll hoch-/herunterladen, Teilnehmerliste nur Excel/CSV |
 | Registrierung | `Auth/RegistrationTest` | 3 | Registrierung, doppelte E-Mail, Passwort-Bestätigung |
@@ -148,6 +153,12 @@ vendor/bin/pint          # Code-Stil korrigieren
 **[`HealthInformationRequestTest`](Feature/HealthInformation/HealthInformationRequestTest.php)**: Suche ohne Code, mit eigenem und fremdem Code; Protokoll-Download ohne Datei (404).
 
 `HealthFormAccessTest` zusätzlich: `GET /healthform` ohne Codes leitet zur Startseite, Allergiepass-Download ohne Datei 404.
+
+**[`ParticipantFlowTest`](Feature/HealthForm/ParticipantFlowTest.php)**: Scheitert die Validierung, leitet `HealthFormUpdateRequest` auf `/healthform?form=<id>`; das Blatt erscheint wieder mit Fehlern und den bisherigen Eingaben (`old()` in `components/forms/text*.blade.php`), auch wenn mehrere Blätter freigeschaltet sind. Ohne Freischaltung oder bei beendetem Lager: Startseite. Abgeschlossene Blätter sind nur lesbar, wenn das Lager „Abgeschlossene Blätter schliessen“ (`forms_finished`) gesetzt hat.
+
+**[`QuestionTest`](Feature/Question/QuestionTest.php)**: Eine neue individuelle Frage wird allen bestehenden Gesundheitsblättern des Lagers (leer) hinzugefügt und erscheint im Formular der Teilnehmenden.
+
+**[`DailyTaskTest`](Feature/Console/DailyTaskTest.php)**: Im Scheduler täglich um 3 Uhr (Prod-Cron ruft `schedule:run` auf). Setzt Code, Status und Daten des Demo-Lagers zurück, andere Lager bleiben unverändert; ohne Demo-Lager kein Absturz.
 
 **[`HealthFormUpdateTest`](Feature/HealthForm/HealthFormUpdateTest.php)**: Teilnehmende nach Eingabe der Codes.
 
@@ -195,6 +206,10 @@ vendor/bin/pint          # Code-Stil korrigieren
 | `test_search_*` | Suche nur mit exakter E-Mail, ohne Admins und Mitglieder, nur `id`, `username`, `email` |
 
 **[`CampManagementTest`](Feature/Security/CampManagementTest.php)**: `dashboard/camps/{camp}` bearbeiten und löschen nur als Lagerleitung dieses Lagers (Mitgliedschaft, nicht aktuelle Rolle); nur Formularfelder (`global_camp`, `code`, `finish` usw. werden ignoriert); verantwortliche Person muss Lagerleitung des Lagers sein; beim Löschen wechseln nur Personen ins Global-Camp, die gerade in diesem Lager sind.
+
+**[`FileAccessTest`](Feature/Security/FileAccessTest.php)**: `Helper::uploadedFilePath()` liefert nur Dateien, die wirklich in `storage/app/files` liegen. Vorher konnte über einen manipulierten Pfad (`../.env`) jede Datei des Servers heruntergeladen werden. Tests mit temporärem Speicher und einer Datei neben dem Upload-Ordner.
+
+**[`QuestionAccessTest`](Feature/Security/QuestionAccessTest.php)**: `QuestionPolicy::manage`, Fragen nur im aktuellen Lager bearbeiten/löschen; `camp_id` kommt nie aus dem Formular.
 
 **[`RemovedFeaturesTest`](Feature/Security/RemovedFeaturesTest.php)**: Der Cevi-DB-Import der Gesundheitsblätter (`POST dashboard/healthforms/import`) rief mit dem Server-Token `db.cevi.ch` auf und legte Blätter ohne Lager an. Route, Methode und Modal sind entfernt; der Test verhindert mit `Http::preventStrayRequests()` echte Anfragen nach aussen. Das Paket `ixudra/curl` ist entfernt.
 

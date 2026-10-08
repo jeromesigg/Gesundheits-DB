@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Policies\HealthFormPolicy;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -14,6 +15,20 @@ class HealthFormUpdateRequest extends FormRequest
     public function authorize(): bool
     {
         return Gate::allows('access', $this->route('healthform'));
+    }
+
+    /**
+     * Teilnehmende kommen bei Fehlern zurück zu ihrem Formular (GET /healthform?form=...),
+     * nicht zur leeren Code-Eingabe.
+     */
+    protected function getRedirectUrl(): string
+    {
+        $healthForm = $this->route('healthform');
+        if (in_array($healthForm->id, session(HealthFormPolicy::UNLOCKED_SESSION_KEY, []), true)) {
+            return url('/healthform').'?form='.$healthForm->id;
+        }
+
+        return parent::getRedirectUrl();
     }
 
     /**

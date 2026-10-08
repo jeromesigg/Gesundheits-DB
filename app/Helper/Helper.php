@@ -153,6 +153,23 @@ class Helper
         }
     }
 
+    /**
+     * Absoluter Pfad einer hochgeladenen Datei, aber nur, wenn sie wirklich in storage/app/files liegt.
+     */
+    public static function uploadedFilePath(?string $relativePath): ?string
+    {
+        if (blank($relativePath)) {
+            return null;
+        }
+        $uploadFolder = realpath(storage_path('app/files'));
+        $path = realpath(storage_path($relativePath));
+        if ($uploadFolder === false || $path === false || ! str_starts_with($path, $uploadFolder.DIRECTORY_SEPARATOR) || ! is_file($path)) {
+            return null;
+        }
+
+        return $path;
+    }
+
     public static function getAvatarPath($avatar)
     {
         $path = null;
