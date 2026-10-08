@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Role;
+use App\Enums\UserRole;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -22,8 +22,8 @@ class AddCampUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => ['required', Rule::exists('users', 'id')->whereNot('role_id', config('status.role_Administrator'))],
-            'role_id_add' => ['required', 'integer', Rule::in(Role::assignableIds())],
+            'user_id' => ['required', Rule::exists('users', 'id')->whereNot('role_id', UserRole::Administrator->value)],
+            'role_id_add' => ['required', 'integer', Rule::in(UserRole::assignableValues())],
         ];
     }
 

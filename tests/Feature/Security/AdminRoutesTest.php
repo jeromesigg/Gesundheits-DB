@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -40,7 +41,7 @@ class AdminRoutesTest extends TestCase
     #[DataProvider('maintenanceRoutes')]
     public function test_manager_cannot_run_maintenance_command(string $uri, string $command, array $arguments): void
     {
-        $manager = User::factory()->create(['role_id' => config('status.role_Lagerleiter')]);
+        $manager = User::factory()->create(['role_id' => UserRole::CampLeader]);
         Artisan::shouldReceive('call')->never();
 
         $this->actingAs($manager)->get($uri)->assertRedirect('/dashboard');
@@ -52,7 +53,7 @@ class AdminRoutesTest extends TestCase
     #[DataProvider('maintenanceRoutes')]
     public function test_admin_can_run_maintenance_command(string $uri, string $command, array $arguments): void
     {
-        $admin = User::factory()->create(['role_id' => config('status.role_Administrator')]);
+        $admin = User::factory()->create(['role_id' => UserRole::Administrator]);
         Artisan::shouldReceive('call')->once()->with($command, ...($arguments === [] ? [] : [$arguments]))->andReturn(0);
 
         $this->actingAs($admin)->get($uri)->assertOk();
@@ -74,7 +75,7 @@ class AdminRoutesTest extends TestCase
     #[DataProvider('removedRoutes')]
     public function test_removed_route_does_not_exist_for_admins(string $uri): void
     {
-        $admin = User::factory()->create(['role_id' => config('status.role_Administrator')]);
+        $admin = User::factory()->create(['role_id' => UserRole::Administrator]);
         Artisan::shouldReceive('call')->never();
 
         $this->actingAs($admin)->get($uri)->assertNotFound();

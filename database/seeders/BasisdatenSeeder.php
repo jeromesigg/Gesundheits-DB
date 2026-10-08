@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\TrafficLight;
 use App\Models\HealthStatus;
 use Illuminate\Database\Seeder;
 
@@ -16,15 +17,15 @@ class BasisdatenSeeder extends Seeder
     {
         //
 
-        HealthStatus::firstOrCreate(['id' => config('status.health_green')],
+        HealthStatus::firstOrCreate(['id' => TrafficLight::Green->value],
             [
                 'name' => 'Grün',
             ]);
-        HealthStatus::firstOrCreate(['id' => config('status.health_yellow')],
+        HealthStatus::firstOrCreate(['id' => TrafficLight::Yellow->value],
             [
                 'name' => 'Gelb',
             ]);
-        HealthStatus::firstOrCreate(['id' => config('status.health_red')],
+        HealthStatus::firstOrCreate(['id' => TrafficLight::Red->value],
             [
                 'name' => 'Rot',
             ]);

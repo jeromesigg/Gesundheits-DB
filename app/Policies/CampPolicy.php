@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\Camp;
 use App\Models\CampUser;
 use App\Models\User;
@@ -11,12 +12,12 @@ class CampPolicy
     /**
      * Rolle des Users in diesem Lager laut aktiver Mitgliedschaft (camp_users), sonst null.
      */
-    public static function membershipRole(User $user, Camp $camp): ?int
+    public static function membershipRole(User $user, Camp $camp): ?UserRole
     {
         return CampUser::where('camp_id', $camp->id)
             ->where('user_id', $user->id)
             ->where('active', true)
-            ->value('role_id');
+            ->first()?->role_id;
     }
 
     /**
@@ -24,10 +25,7 @@ class CampPolicy
      */
     public function manage(User $user, Camp $camp): bool
     {
-        return in_array(self::membershipRole($user, $camp), [
-            config('status.role_Administrator'),
-            config('status.role_Lagerleiter'),
-        ], true);
+        return self::membershipRole($user, $camp)?->canManage() ?? false;
     }
 
     /**

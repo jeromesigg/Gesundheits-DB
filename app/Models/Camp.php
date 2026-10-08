@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -18,7 +19,7 @@ class Camp extends Model
             // get the admin user and assign roles/permissions on new team model
             CampUser::create([
                 'user_id' => 1,
-                'role_id' => config('status.role_Administrator'),
+                'role_id' => UserRole::Administrator,
                 'camp_id' => $camp['id'],
             ]);
         });
@@ -47,13 +48,13 @@ class Camp extends Model
     public function allUsers()
     {
         return $this->belongsToMany('App\Models\User', 'camp_users')
-            ->where('camp_users.role_id', '<>', config('status.role_Administrator'));
+            ->where('camp_users.role_id', '<>', UserRole::Administrator);
     }
 
     public function camp_users_all()
     {
         return $this->hasMany(CampUser::class)
-            ->where('camp_users.role_id', '<>', config('status.role_Administrator'));
+            ->where('camp_users.role_id', '<>', UserRole::Administrator);
     }
 
     public function questions()

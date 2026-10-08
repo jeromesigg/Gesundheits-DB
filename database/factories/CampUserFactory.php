@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use App\Models\Camp;
 use App\Models\CampUser;
 use App\Models\User;
@@ -20,7 +21,7 @@ class CampUserFactory extends Factory
         return [
             'camp_id' => Camp::factory(),
             'user_id' => User::factory(),
-            'role_id' => config('status.role_Helfer'),
+            'role_id' => UserRole::Helper,
             'active' => true,
         ];
     }

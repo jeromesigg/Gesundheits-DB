@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\CampUser;
 use App\Models\User;
 
@@ -25,8 +26,8 @@ class UserPolicy
         }
         $targetRole = CampUser::where('camp_id', $user->camp_id)
             ->where('user_id', $target->id)
-            ->value('role_id');
+            ->first()?->role_id;
 
-        return $targetRole !== null && $targetRole !== config('status.role_Administrator');
+        return $targetRole !== null && $targetRole !== UserRole::Administrator;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Enums\UserRole;
 use App\Models\Camp;
 use Tests\Support\CampScenario;
 use Tests\TestCase;
@@ -39,7 +40,7 @@ class CampManagementTest extends TestCase
     public function test_manager_cannot_delete_camp_where_only_helper(): void
     {
         $scenario = CampScenario::create();
-        $scenario->helper->update(['role_id' => config('status.role_Lagerleiter')]);
+        $scenario->helper->update(['role_id' => UserRole::CampLeader]);
 
         $this->actingAs($scenario->helper->fresh())
             ->delete(route('dashboard.camps.destroy', $scenario->camp))

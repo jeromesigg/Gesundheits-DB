@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Events\CampCreated;
 use App\Helper\Helper;
 use App\Http\Requests\UpdateCampRequest;
@@ -100,7 +101,7 @@ class AdminCampController extends Controller
     public function edit(Camp $camp)
     {
         $this->authorize('manage', $camp);
-        $users = $camp->allUsers()->wherePivot('role_id', config('status.role_Lagerleiter'))->pluck('username', 'users.id')->all();
+        $users = $camp->allUsers()->wherePivot('role_id', UserRole::CampLeader->value)->pluck('username', 'users.id')->all();
 
         $title = 'Lager aktualisieren';
         $help = Help::where('title', $title)->first();

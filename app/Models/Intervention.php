@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TrafficLight;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,10 @@ class Intervention extends Model implements Auditable
 {
     use HasFactory;
     use \OwenIt\Auditing\Auditable;
+
+    protected $casts = [
+        'health_status_id' => TrafficLight::class,
+    ];
 
     protected $fillable = [
         'id', 'health_information_id', 'date', 'time', 'parameter', 'value', 'comment', 'user_id', 'user_erf', 'file',

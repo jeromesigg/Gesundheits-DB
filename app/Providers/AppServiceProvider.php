@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Telescope\TelescopeServiceProvider;
 
@@ -19,7 +18,6 @@ class AppServiceProvider extends ServiceProvider
 
         if ($this->app->environment('local')) {
             $this->app->register(TelescopeServiceProvider::class);
-            $this->app->register(TelescopeServiceProvider::class);
         }
     }
 
@@ -28,11 +26,5 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
-    {
-        //
-        Blade::if('isFirstSurvey', function ($value) {
-            return $value <= config('status.survey_1offen');
-        });
-    }
+    public function boot() {}
 }

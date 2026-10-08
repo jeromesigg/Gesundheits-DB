@@ -4,7 +4,7 @@
 
 > **Beim Hinzufügen eines Tests bitte diese Datei ergänzen**, siehe [Neuen Test schreiben](#neuen-test-schreiben).
 
-Stand 08.10.2026: **242 Testfälle in 34 Dateien**, Laufzeit rund 8 Sekunden.
+Stand 08.10.2026: **261 Testfälle in 36 Dateien**, Laufzeit rund 8 Sekunden.
 Aktuelle Zahlen: `vendor/bin/phpunit --list-tests`
 
 ## Inhalt
@@ -106,6 +106,8 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Login | `Auth/DemoLoginTest` | 4 | Demo-Logins mit und ohne Demo-Daten |
 | Interventionen | `Intervention/InterventionRequestTest` | 5 | AJAX-Endpunkte mit fehlenden Parametern |
 | Interventionen | `Intervention/InterventionStoreTest` | 5 | Speichern: nur Formularfelder, Nummern/Zuordnung/Bildpfad vom Server |
+| Enums | `Enums/UserRoleTest` | 10 | Rollen: Werte = Tabelle `roles`, Rechte aus dem Enum, Vorauswahl im Formular |
+| Enums | `Enums/TrafficLightTest` | 8 | Ampel: Werte = Tabelle `health_statuses`, Anzeige, Sortierung, Vorauswahl |
 | Hilfen | `Helper/HealthFormLookupTest` | 5 | Suche nach persönlichem Code über `code_hash`, Nachtrag per Migration |
 | Gesundheitsblatt | `HealthForm/HealthFormCreateTest` | 3 | Lagerleitung erstellt Blatt: Code, Gesundheitsinfo, Fragen |
 | Gesundheitsblatt | `HealthForm/HealthFormImportTest` | 4 | Import der ausgefüllten Vorlage `public/files/vorlage.xlsx` |
@@ -159,6 +161,21 @@ vendor/bin/pint          # Code-Stil korrigieren
 **[`HealthInformationRequestTest`](Feature/HealthInformation/HealthInformationRequestTest.php)**: Suche ohne Code, mit eigenem und fremdem Code; Protokoll-Download ohne Datei (404).
 
 `HealthFormAccessTest` zusätzlich: `GET /healthform` ohne Codes leitet zur Startseite, Allergiepass-Download ohne Datei 404.
+
+### Enums
+
+Feste IDs stehen als Enums in `app/Enums` (früher `config/status.php`, gelöscht):
+
+| Enum | Fälle (Wert) | Spalten (Cast) |
+|---|---|---|
+| `UserRole` | `Administrator` (1), `CampLeader` (2), `Helper` (3), `Participant` (4) | `users.role_id`, `camp_users.role_id` |
+| `TrafficLight` | `Green` (10), `Yellow` (20), `Red` (30) | `interventions.health_status_id`, `health_information.health_status_id` |
+
+- `User::isAdmin()/isManager()/isHelper()` kommen aus `UserRole` (`canManage()`, `canHelp()`); die Flags der Tabelle `roles` müssen dazu passen (Test).
+- In Requests und URLs `->value`, in Models, Abfragen und Assertions das Enum. Vergleiche nur mit `===` oder Methoden, nie `<`/`>`/`==`.
+- `components/forms/select.blade.php` wählt auch bei Enum-Werten den aktuellen Eintrag vor (Test für beide Enums).
+
+**[`UserRoleTest`](Feature/Enums/UserRoleTest.php)**, **[`TrafficLightTest`](Feature/Enums/TrafficLightTest.php)**: Werte gegen die Tabellen, Rechte und Ampelfarben per Data Provider, Cast, Sortierung nach Dringlichkeit in der Teilnehmerübersicht, Vorauswahl im Formular.
 
 **[`HealthFormLookupTest`](Feature/Helper/HealthFormLookupTest.php)**: `HealthForm.code` ist nicht deterministisch verschlüsselt; gesucht wird über `code_hash` (HMAC-SHA256 mit `APP_KEY`, gesetzt beim Speichern). `Helper::getHealthForm()` lädt nur noch das passende Blatt (vorher alle Blätter aller Lager, die Teilnehmerübersicht brauchte bei 500 Blättern ~7 s, jetzt ~0,3 s). Die Migration trägt den Hash für bestehende Blätter nach (`fillCodeHashes()`).
 
@@ -302,7 +319,7 @@ Registrierung ist offen und jede Person kann ein eigenes Lager anlegen (wird dor
 | Profil ändern | Nur eigenes Konto, nur E-Mail und Passwort |
 | Lager wechseln | Nur mit aktiver Mitgliedschaft (`camp_users`) oder ins Global-Camp; Rolle aus der Mitgliedschaft |
 | Leitende verwalten (bearbeiten inkl. Passwort, entfernen) | Lagerleitung: nur Mitglieder des aktuellen Lagers, nie Admins |
-| Rollen vergeben | Nur Lagerleitung, Helfende, Teilnehmende (`Role::assignableIds()`) |
+| Rollen vergeben | Nur Lagerleitung, Helfende, Teilnehmende (`UserRole::assignable()`) |
 | Lager bearbeiten/löschen | Nur als Lagerleitung (oder Admin) dieses Lagers laut Mitgliedschaft |
 | Personensuche | Nur exakte E-Mail-Adresse |
 

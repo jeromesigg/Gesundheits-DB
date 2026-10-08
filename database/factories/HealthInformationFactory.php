@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\TrafficLight;
 use App\Helper\Helper;
 use App\Models\HealthInformation;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -23,7 +24,7 @@ class HealthInformationFactory extends Factory
             'code' => Helper::generateUniqueCode(),
             'allergy' => $this->faker->randomElement([null, 'Nüsse', 'Bienenstiche']),
             'drug_longterm' => null,
-            'health_status_id' => config('status.health_green'),
+            'health_status_id' => TrafficLight::Green,
         ];
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Role;
+use App\Enums\UserRole;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -22,7 +22,7 @@ class StoreCampUserRequest extends FormRequest
         return [
             'username' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'role_id' => ['required', 'integer', Rule::in(Role::assignableIds())],
+            'role_id' => ['required', 'integer', Rule::in(UserRole::assignableValues())],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];
     }

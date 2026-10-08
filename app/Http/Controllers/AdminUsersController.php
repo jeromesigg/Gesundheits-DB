@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Helper\Helper;
 use App\Http\Requests\AddCampUserRequest;
 use App\Http\Requests\StoreCampUserRequest;
@@ -27,7 +28,7 @@ class AdminUsersController extends Controller
      */
     public function index()
     {
-        $roles = Role::whereIn('id', Role::assignableIds())->pluck('name', 'id')->all();
+        $roles = Role::whereIn('id', UserRole::assignableValues())->pluck('name', 'id')->all();
         $title = 'Personen';
         $help = Help::where('title', $title)->first();
 
@@ -88,7 +89,7 @@ class AdminUsersController extends Controller
         $members = CampUser::where('camp_id', $camp->id)->pluck('user_id');
 
         return User::whereRaw('LOWER(email) = ?', [mb_strtolower(trim((string) $request->get('term')))])
-            ->where('role_id', '<>', config('status.role_Administrator'))
+            ->where('role_id', '<>', UserRole::Administrator)
             ->whereNotIn('id', $members)
             ->get(['id', 'username', 'email']);
     }
@@ -151,7 +152,7 @@ class AdminUsersController extends Controller
     public function edit(User $user)
     {
         $this->authorize('manage', $user);
-        $roles = Role::whereIn('id', Role::assignableIds())->pluck('name', 'id')->all();
+        $roles = Role::whereIn('id', UserRole::assignableValues())->pluck('name', 'id')->all();
         $camp_user = $user->camp_user()->first();
         $user->role_id = $camp_user->role_id;
         $title = 'Person aktualisieren';

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Enums\TrafficLight;
 use App\Models\HealthForm;
 use App\Models\Intervention;
 use App\Models\User;
@@ -231,7 +232,7 @@ class CampAccessTest extends TestCase
             'parameter' => 'Kopfweh',
             'value' => 'leicht',
             'user_erf' => $this->scenario->helper->username,
-            'health_status_id' => config('status.health_green'),
+            'health_status_id' => TrafficLight::Green->value,
         ], $overrides);
     }
 }

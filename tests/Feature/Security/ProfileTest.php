@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Tests\Support\CampScenario;
@@ -66,13 +67,13 @@ class ProfileTest extends TestCase
             ->patch(route('dashboard.update', $stranger), [
                 'email' => $stranger->email,
                 'password' => '',
-                'role_id' => config('status.role_Administrator'),
+                'role_id' => UserRole::Administrator->value,
                 'camp_id' => $scenario->camp->id,
                 'demo' => 1,
             ]);
 
         $stranger = $stranger->fresh();
-        $this->assertSame(config('status.role_Teilnehmer'), $stranger->role_id);
+        $this->assertSame(UserRole::Participant, $stranger->role_id);
         $this->assertSame(1, $stranger->camp_id);
         $this->assertFalse((bool) $stranger->demo);
     }

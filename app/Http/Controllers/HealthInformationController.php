@@ -44,7 +44,7 @@ class HealthInformationController extends Controller
                 return '<a href='.\URL::route('healthinformation.show', $act_healthinfo).'>'.$code.'</a>';
             })
             ->addColumn('status', function (HealthInformation $act_healthinfo) {
-                $interventions_open = $act_healthinfo->interventions_open->sortByDesc('health_status_id')->first();
+                $interventions_open = $act_healthinfo->interventions_open->sortByDesc(fn (Intervention $intervention) => $intervention->health_status_id?->value)->first();
                 $status = 'Keine offene Intervention';
                 if (isset($interventions_open)) {
                     $status = Helper::getHealthStatus($interventions_open);

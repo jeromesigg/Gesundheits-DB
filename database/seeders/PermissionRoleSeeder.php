@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\Camp;
 use App\Models\Role;
 use App\Models\User;
@@ -20,10 +21,10 @@ class PermissionRoleSeeder extends Seeder
         //
 
         // Insert some stuff
-        Role::create(['id' => config('status.role_Administrator'), 'name' => 'Administrator', 'is_admin' => true, 'is_manager' => false, 'is_helper' => false]);
-        Role::create(['id' => config('status.role_Lagerleiter'),    'name' => 'Lagerleitende',  'is_admin' => false, 'is_manager' => true, 'is_helper' => false]);
-        Role::create(['id' => config('status.role_Helfer'),        'name' => 'Helfer',        'is_admin' => false, 'is_manager' => false, 'is_helper' => true]);
-        Role::create(['id' => config('status.role_Teilnehmer'),    'name' => 'Teilnehmende',  'is_admin' => false, 'is_manager' => false, 'is_helper' => false]);
+        Role::create(['id' => UserRole::Administrator, 'name' => 'Administrator', 'is_admin' => true, 'is_manager' => false, 'is_helper' => false]);
+        Role::create(['id' => UserRole::CampLeader,    'name' => 'Lagerleitende',  'is_admin' => false, 'is_manager' => true, 'is_helper' => false]);
+        Role::create(['id' => UserRole::Helper,        'name' => 'Helfer',        'is_admin' => false, 'is_manager' => false, 'is_helper' => true]);
+        Role::create(['id' => UserRole::Participant,    'name' => 'Teilnehmende',  'is_admin' => false, 'is_manager' => false, 'is_helper' => false]);
 
         $user = User::create([
             'id' => 1,
@@ -31,7 +32,7 @@ class PermissionRoleSeeder extends Seeder
             'email' => 'admin@ehealth',
             'slug' => 'administrator',
             'password' => Hash::make(config('app.admin_password')),
-            'role_id' => config('status.role_Administrator'),
+            'role_id' => UserRole::Administrator,
             'email_verified_at' => now(),
         ]);
         $camp = Camp::create(['name' => 'Global-Camp', 'global_camp' => true, 'code' => '0000']);

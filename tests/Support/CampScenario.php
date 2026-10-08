@@ -2,6 +2,7 @@
 
 namespace Tests\Support;
 
+use App\Enums\TrafficLight;
 use App\Models\Camp;
 use App\Models\HealthForm;
 use App\Models\HealthInformation;
@@ -135,13 +136,13 @@ class CampScenario
             'health_information_id' => $this->openInfo->id,
             'user_id' => $this->helper->id,
             'user_erf' => $this->helper->username,
-            'health_status_id' => config('status.health_yellow'),
+            'health_status_id' => TrafficLight::Yellow,
         ]);
         $this->closedIntervention = Intervention::factory()->create([
             'health_information_id' => $this->openInfo->id,
             'user_id' => $this->helper->id,
             'user_erf' => $this->helper->username,
-            'health_status_id' => config('status.health_green'),
+            'health_status_id' => TrafficLight::Green,
             'date_close' => now()->toDateString(),
             'time_close' => now()->format('H:i'),
             'user_close' => $this->manager->username,

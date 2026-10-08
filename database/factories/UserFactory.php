@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use App\Models\Camp;
 use App\Models\CampUser;
 use App\Models\User;
@@ -30,7 +31,7 @@ class UserFactory extends Factory
             'slug' => Str::slug($username),
             'email' => $this->faker->unique()->safeEmail(),
             'password' => Hash::make('password'),
-            'role_id' => config('status.role_Teilnehmer'),
+            'role_id' => UserRole::Participant,
             'email_verified_at' => now(),
             'camp_id' => 1,
             'demo' => false,
@@ -39,17 +40,17 @@ class UserFactory extends Factory
 
     public function admin(): static
     {
-        return $this->state(fn () => ['role_id' => config('status.role_Administrator')]);
+        return $this->state(fn () => ['role_id' => UserRole::Administrator]);
     }
 
     public function manager(): static
     {
-        return $this->state(fn () => ['role_id' => config('status.role_Lagerleiter')]);
+        return $this->state(fn () => ['role_id' => UserRole::CampLeader]);
     }
 
     public function helper(): static
     {
-        return $this->state(fn () => ['role_id' => config('status.role_Helfer')]);
+        return $this->state(fn () => ['role_id' => UserRole::Helper]);
     }
 
     public function unverified(): static

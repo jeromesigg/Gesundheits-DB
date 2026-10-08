@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Events\CampCreated;
 use App\Helper\Helper;
 use App\Models\Camp;
@@ -74,11 +75,11 @@ class CampController extends Controller
             $input['konekta'] = isset($input['konekta']);
             $camp = Camp::create($input);
             CampCreated::dispatch($camp);
-            $user->update(['camp_id' => $camp->id, 'role_id' => config('status.role_Lagerleiter')]);
+            $user->update(['camp_id' => $camp->id, 'role_id' => UserRole::CampLeader]);
             CampUser::create([
                 'user_id' => $user->id,
                 'camp_id' => $camp->id,
-                'role_id' => config('status.role_Lagerleiter'), ]);
+                'role_id' => UserRole::CampLeader, ]);
         }
 
         return redirect('dashboard');

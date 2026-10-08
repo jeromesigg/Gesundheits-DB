@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\HealthForm;
 
+use App\Enums\TrafficLight;
 use App\Models\HealthForm;
 use App\Models\HealthInformationQuestion;
 use Illuminate\Http\UploadedFile;
@@ -80,7 +81,7 @@ class HealthFormUpdateTest extends TestCase
             'healthinfo' => [
                 'camp_id' => $this->scenario->otherCamp->id,
                 'code' => 999999,
-                'health_status_id' => config('status.health_red'),
+                'health_status_id' => TrafficLight::Red->value,
                 'file_protocol' => '../../.env',
             ],
         ]));
@@ -94,7 +95,7 @@ class HealthFormUpdateTest extends TestCase
         $healthInfo = $this->scenario->openInfo->fresh();
         $this->assertSame($this->scenario->camp->id, $healthInfo->camp_id);
         $this->assertSame($this->scenario->openCode, (int) $healthInfo->code);
-        $this->assertSame(config('status.health_green'), $healthInfo->health_status_id);
+        $this->assertSame(TrafficLight::Green, $healthInfo->health_status_id);
         $this->assertNull($healthInfo->file_protocol);
     }
 

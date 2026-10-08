@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,6 +16,7 @@ class CampUser extends Model
 
     protected $casts = [
         'active' => 'boolean',
+        'role_id' => UserRole::class,
     ];
 
     public function user()

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Enums\UserRole;
 use App\Models\CampUser;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -41,23 +42,23 @@ class UserManagementTest extends TestCase
         $helper = $this->scenario->helper;
 
         $this->actingAs($this->scenario->manager)
-            ->patch(route('dashboard.users.update', $helper), $this->updatePayload($helper, ['role_id' => config('status.role_Lagerleiter')]));
+            ->patch(route('dashboard.users.update', $helper), $this->updatePayload($helper, ['role_id' => UserRole::CampLeader->value]));
 
-        $this->assertSame(config('status.role_Lagerleiter'), $this->membership($helper)->role_id);
-        $this->assertSame(config('status.role_Lagerleiter'), $helper->fresh()->role_id);
+        $this->assertSame(UserRole::CampLeader, $this->membership($helper)->role_id);
+        $this->assertSame(UserRole::CampLeader, $helper->fresh()->role_id);
     }
 
     public function test_role_change_does_not_touch_current_role_in_another_camp(): void
     {
         $helper = $this->scenario->helper;
-        CampUser::create(['camp_id' => $this->scenario->otherCamp->id, 'user_id' => $helper->id, 'role_id' => config('status.role_Teilnehmer'), 'active' => true]);
-        $helper->update(['camp_id' => $this->scenario->otherCamp->id, 'role_id' => config('status.role_Teilnehmer')]);
+        CampUser::create(['camp_id' => $this->scenario->otherCamp->id, 'user_id' => $helper->id, 'role_id' => UserRole::Participant, 'active' => true]);
+        $helper->update(['camp_id' => $this->scenario->otherCamp->id, 'role_id' => UserRole::Participant]);
 
         $this->actingAs($this->scenario->manager)
-            ->patch(route('dashboard.users.update', $helper), $this->updatePayload($helper, ['role_id' => config('status.role_Lagerleiter')]));
+            ->patch(route('dashboard.users.update', $helper), $this->updatePayload($helper, ['role_id' => UserRole::CampLeader->value]));
 
-        $this->assertSame(config('status.role_Lagerleiter'), $this->membership($helper)->role_id);
-        $this->assertSame(config('status.role_Teilnehmer'), $helper->fresh()->role_id);
+        $this->assertSame(UserRole::CampLeader, $this->membership($helper)->role_id);
+        $this->assertSame(UserRole::Participant, $helper->fresh()->role_id);
     }
 
     public function test_manager_cannot_grant_admin_role(): void
@@ -65,11 +66,11 @@ class UserManagementTest extends TestCase
         $helper = $this->scenario->helper;
 
         $this->actingAs($this->scenario->manager)
-            ->patch(route('dashboard.users.update', $helper), $this->updatePayload($helper, ['role_id' => config('status.role_Administrator')]))
+            ->patch(route('dashboard.users.update', $helper), $this->updatePayload($helper, ['role_id' => UserRole::Administrator->value]))
             ->assertSessionHasErrors('role_id');
 
-        $this->assertSame(config('status.role_Helfer'), $helper->fresh()->role_id);
-        $this->assertSame(config('status.role_Helfer'), $this->membership($helper)->role_id);
+        $this->assertSame(UserRole::Helper, $helper->fresh()->role_id);
+        $this->assertSame(UserRole::Helper, $this->membership($helper)->role_id);
     }
 
     public function test_manager_cannot_edit_update_or_remove_user_of_other_camp(): void
@@ -127,7 +128,7 @@ class UserManagementTest extends TestCase
             ->post(route('dashboard.users.store'), [
                 'username' => 'Neue Person',
                 'email' => 'neu@example.com',
-                'role_id' => config('status.role_Administrator'),
+                'role_id' => UserRole::Administrator->value,
                 'password' => 'passwort1',
                 'password_confirmation' => 'passwort1',
             ])
@@ -142,7 +143,7 @@ class UserManagementTest extends TestCase
             ->post(route('dashboard.users.store'), [
                 'username' => 'Neue Person',
                 'email' => 'neu@example.com',
-                'role_id' => config('status.role_Helfer'),
+                'role_id' => UserRole::Helper->value,
                 'password' => 'passwort1',
                 'password_confirmation' => 'passwort1',
                 'demo' => 1,
@@ -153,8 +154,8 @@ class UserManagementTest extends TestCase
         $user = User::where('email', 'neu@example.com')->firstOrFail();
         $this->assertFalse((bool) $user->demo);
         $this->assertSame($this->scenario->camp->id, $user->camp_id);
-        $this->assertSame(config('status.role_Helfer'), $user->role_id);
-        $this->assertSame(config('status.role_Helfer'), $this->membership($user)->role_id);
+        $this->assertSame(UserRole::Helper, $user->role_id);
+        $this->assertSame(UserRole::Helper, $this->membership($user)->role_id);
     }
 
     public function test_add_existing_user_with_allowed_role(): void
@@ -162,10 +163,10 @@ class UserManagementTest extends TestCase
         $person = User::factory()->create();
 
         $this->actingAs($this->scenario->manager)
-            ->post(route('users.add'), ['user_id' => $person->id, 'role_id_add' => config('status.role_Helfer')])
+            ->post(route('users.add'), ['user_id' => $person->id, 'role_id_add' => UserRole::Helper->value])
             ->assertRedirect('/dashboard/users');
 
-        $this->assertSame(config('status.role_Helfer'), $this->membership($person)->role_id);
+        $this->assertSame(UserRole::Helper, $this->membership($person)->role_id);
     }
 
     public function test_add_cannot_grant_admin_role(): void
@@ -173,7 +174,7 @@ class UserManagementTest extends TestCase
         $person = User::factory()->create();
 
         $this->actingAs($this->scenario->manager)
-            ->post(route('users.add'), ['user_id' => $person->id, 'role_id_add' => config('status.role_Administrator')])
+            ->post(route('users.add'), ['user_id' => $person->id, 'role_id_add' => UserRole::Administrator->value])
             ->assertSessionHasErrors('role_id_add');
 
         $this->assertNull($this->membership($person));
@@ -219,7 +220,7 @@ class UserManagementTest extends TestCase
         return array_merge([
             'username' => $user->username,
             'email' => $user->email,
-            'role_id' => config('status.role_Helfer'),
+            'role_id' => UserRole::Helper->value,
             'active' => 1,
             'password' => '',
             'password_confirmation' => '',

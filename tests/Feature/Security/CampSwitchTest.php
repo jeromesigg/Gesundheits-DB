@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Enums\UserRole;
 use App\Models\Camp;
 use App\Models\CampUser;
 use Tests\Support\CampScenario;
@@ -15,7 +16,7 @@ class CampSwitchTest extends TestCase
     public function test_member_can_switch_to_own_camp_with_role_of_membership(): void
     {
         $scenario = CampScenario::create();
-        CampUser::create(['camp_id' => $scenario->otherCamp->id, 'user_id' => $scenario->manager->id, 'role_id' => config('status.role_Helfer'), 'active' => true]);
+        CampUser::create(['camp_id' => $scenario->otherCamp->id, 'user_id' => $scenario->manager->id, 'role_id' => UserRole::Helper, 'active' => true]);
 
         $this->actingAs($scenario->manager)
             ->patch(route('camps.update', $scenario->otherCamp))
@@ -23,7 +24,7 @@ class CampSwitchTest extends TestCase
 
         $manager = $scenario->manager->fresh();
         $this->assertSame($scenario->otherCamp->id, $manager->camp_id);
-        $this->assertSame(config('status.role_Helfer'), $manager->role_id);
+        $this->assertSame(UserRole::Helper, $manager->role_id);
     }
 
     public function test_user_cannot_switch_to_camp_without_membership(): void
@@ -41,7 +42,7 @@ class CampSwitchTest extends TestCase
     public function test_user_cannot_switch_to_camp_with_inactive_membership(): void
     {
         $scenario = CampScenario::create();
-        CampUser::create(['camp_id' => $scenario->camp->id, 'user_id' => $scenario->otherManager->id, 'role_id' => config('status.role_Helfer'), 'active' => false]);
+        CampUser::create(['camp_id' => $scenario->camp->id, 'user_id' => $scenario->otherManager->id, 'role_id' => UserRole::Helper, 'active' => false]);
 
         $this->actingAs($scenario->otherManager)
             ->patch(route('camps.update', $scenario->camp))
@@ -61,6 +62,6 @@ class CampSwitchTest extends TestCase
 
         $helper = $scenario->helper->fresh();
         $this->assertSame($globalCamp->id, $helper->camp_id);
-        $this->assertSame(config('status.role_Teilnehmer'), $helper->role_id);
+        $this->assertSame(UserRole::Participant, $helper->role_id);
     }
 }

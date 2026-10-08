@@ -2,6 +2,8 @@
 
 namespace App\Helper;
 
+use App\Enums\TrafficLight;
+use App\Enums\UserRole;
 use App\Models\Camp;
 use App\Models\CampUser;
 use App\Models\Group;
@@ -42,7 +44,7 @@ class Helper
         $camp_user = CampUser::firstOrCreate(['camp_id' => $camp->id, 'user_id' => $user->id]);
         $role_id = $camp_user['role_id'];
         if ($role_id === null) {
-            $role_id = $camp['global_camp'] ? config('status.role_Teilnehmer') : $user['role_id'];
+            $role_id = $camp['global_camp'] ? UserRole::Participant : $user['role_id'];
         }
         $camp_user->update([
             'role_id' => $role_id,
@@ -91,9 +93,10 @@ class Helper
     {
         $status = null;
         if (! isset($intervention['date_close'])) {
-            $red = $intervention['health_status_id'] == config('status.health_red') ? 'red' : '';
-            $yellow = $intervention['health_status_id'] == config('status.health_yellow') ? 'yellow' : '';
-            $green = ($intervention['health_status_id'] == config('status.health_green')) || ! isset($intervention['health_status_id']) ? 'green' : '';
+            $light = $intervention->health_status_id ?? TrafficLight::Green;
+            $red = $light === TrafficLight::Red ? 'red' : '';
+            $yellow = $light === TrafficLight::Yellow ? 'yellow' : '';
+            $green = $light === TrafficLight::Green ? 'green' : '';
 
             $status = '<div class="text-center-profile mbl">
                                     <div class="ampel row" id="ampel">

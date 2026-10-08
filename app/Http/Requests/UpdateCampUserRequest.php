@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Role;
+use App\Enums\UserRole;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -22,7 +22,7 @@ class UpdateCampUserRequest extends FormRequest
         return [
             'username' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->route('user'))],
-            'role_id' => ['required', 'integer', Rule::in(Role::assignableIds())],
+            'role_id' => ['required', 'integer', Rule::in(UserRole::assignableValues())],
             'active' => ['nullable'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ];

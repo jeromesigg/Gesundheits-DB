@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Intervention;
 
+use App\Enums\TrafficLight;
 use App\Models\Intervention;
 use Tests\Support\CampScenario;
 use Tests\TestCase;
@@ -52,11 +53,11 @@ class InterventionWorkflowTest extends TestCase
 
     public function test_master_status_follows_latest_follow_up(): void
     {
-        $this->store(['intervention_master_id' => $this->master->id, 'health_status_id' => config('status.health_red')]);
-        $this->assertSame(config('status.health_red'), $this->master->fresh()->health_status_id);
+        $this->store(['intervention_master_id' => $this->master->id, 'health_status_id' => TrafficLight::Red->value]);
+        $this->assertSame(TrafficLight::Red, $this->master->fresh()->health_status_id);
 
-        $this->store(['intervention_master_id' => $this->master->id, 'health_status_id' => config('status.health_green')]);
-        $this->assertSame(config('status.health_green'), $this->master->fresh()->health_status_id);
+        $this->store(['intervention_master_id' => $this->master->id, 'health_status_id' => TrafficLight::Green->value]);
+        $this->assertSame(TrafficLight::Green, $this->master->fresh()->health_status_id);
     }
 
     public function test_closing_master_closes_open_follow_ups(): void
@@ -112,7 +113,7 @@ class InterventionWorkflowTest extends TestCase
             'parameter' => $parameter,
             'value' => 'Wert',
             'user_erf' => $this->scenario->helper->username,
-            'health_status_id' => config('status.health_yellow'),
+            'health_status_id' => TrafficLight::Yellow->value,
         ];
     }
 }

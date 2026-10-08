@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\UserRole;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,7 @@ class UpdateCampRequest extends FormRequest
                 'nullable',
                 Rule::exists('camp_users', 'user_id')
                     ->where('camp_id', $this->route('camp')->id)
-                    ->where('role_id', config('status.role_Lagerleiter')),
+                    ->where('role_id', UserRole::CampLeader->value),
             ],
             'end_date' => ['nullable', 'date'],
             'independent_form_fill' => ['nullable'],
