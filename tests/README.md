@@ -4,7 +4,7 @@
 
 > **Beim Hinzufügen eines Tests bitte diese Datei ergänzen**, siehe [Neuen Test schreiben](#neuen-test-schreiben).
 
-Stand 07.10.2026: **185 Testfälle in 20 Dateien**, Laufzeit rund 5 Sekunden.
+Stand 08.10.2026: **202 Testfälle in 23 Dateien**, Laufzeit rund 6 Sekunden.
 Aktuelle Zahlen: `vendor/bin/phpunit --list-tests`
 
 ## Inhalt
@@ -94,6 +94,7 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Sicherheit | `Security/CampSwitchTest` | 4 | Lagerwechsel nur mit aktiver Mitgliedschaft |
 | Sicherheit | `Security/UserManagementTest` | 14 | Leitende verwalten: nur eigenes Lager, nie Admins, erlaubte Rollen |
 | Sicherheit | `Security/CampManagementTest` | 6 | Lager bearbeiten/löschen nur als Lagerleitung dieses Lagers |
+| Sicherheit | `Security/RemovedFeaturesTest` | 2 | Entfernter Cevi-DB-Import der Gesundheitsblätter bleibt entfernt |
 | Sicherheit | `Security/AdminRoutesTest` | 8 | Wartungsrouten nur für Admins, gefährliche Routen entfernt |
 | Models | `Models/RoleTest` | 1 | Rollen-Prüfungen liefern Booleans |
 | Seeder | `Seeders/PermissionRoleSeederTest` | 1 | Admin-Passwort kommt aus der Config |
@@ -102,7 +103,9 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Login | `Auth/LoginTest` | 3 | Login mit richtigen/falschen Daten |
 | Login | `Auth/DemoLoginTest` | 4 | Demo-Logins mit und ohne Demo-Daten |
 | Interventionen | `Intervention/InterventionRequestTest` | 5 | AJAX-Endpunkte mit fehlenden Parametern |
-| Gesundheitsinfos | `HealthInformation/HealthInformationRequestTest` | 4 | Suche nach Code, Protokoll-Download ohne Datei |
+| Interventionen | `Intervention/InterventionStoreTest` | 5 | Speichern: nur Formularfelder, Nummern/Zuordnung/Bildpfad vom Server |
+| Gesundheitsblatt | `HealthForm/HealthFormUpdateTest` | 7 | Speichern und Abschliessen durch Teilnehmende, nur Formularfelder, Allergiepass |
+| Gesundheitsinfos | `HealthInformation/HealthInformationRequestTest` | 7 | Suche nach Code, Protokoll hoch-/herunterladen, Teilnehmerliste nur Excel/CSV |
 | Registrierung | `Auth/RegistrationTest` | 3 | Registrierung, doppelte E-Mail, Passwort-Bestätigung |
 | Beispiele | `ExampleTest` (Feature, Unit) | 2 | Laravel-Beispiele |
 
@@ -146,6 +149,19 @@ vendor/bin/pint          # Code-Stil korrigieren
 
 `HealthFormAccessTest` zusätzlich: `GET /healthform` ohne Codes leitet zur Startseite, Allergiepass-Download ohne Datei 404.
 
+**[`HealthFormUpdateTest`](Feature/HealthForm/HealthFormUpdateTest.php)**: Teilnehmende nach Eingabe der Codes.
+
+| Test | Prüft |
+|---|---|
+| `test_save_keeps_health_form_open` | „Speichern“ (`submit_btn=save`) lässt das Blatt offen |
+| `test_close_with_privacy_agreement_finishes_health_form` | „Abschliessen“ (`submit_btn=close`) schliesst ab; war seit 04.03.2026 kaputt (Button-Wert `close`, Controller verglich mit dem Button-Text) |
+| `test_close_without_privacy_agreement_is_rejected` | Abschliessen nur mit Datenschutz-Bestätigung |
+| `test_fields_outside_the_form_are_ignored` | `camp_id`, `code`, `finish`, Dateipfade, `health_status_id` kommen nicht aus dem Formular |
+| `test_answers_only_change_questions_of_own_health_form` | Antworten nur auf Fragen des eigenen Blatts |
+| `test_allergy_pass_*` | Nur PDF, gespeichert als `Allergiepass.pdf` |
+
+**[`InterventionStoreTest`](Feature/Intervention/InterventionStoreTest.php)**: Laufnummer aus dem Lager, `id`/`serial_number`/`user_id` nicht aus dem Formular, Folge- und Unter-Interventionen bleiben beim eigenen Gesundheitsblatt, Bildpfad nur aus echtem Upload.
+
 ### Sicherheit
 
 **[`CampAccessTest`](Feature/Security/CampAccessTest.php)**: Gesundheitsinfos, Interventionen und Gesundheitsblätter im Dashboard.
@@ -179,6 +195,8 @@ vendor/bin/pint          # Code-Stil korrigieren
 | `test_search_*` | Suche nur mit exakter E-Mail, ohne Admins und Mitglieder, nur `id`, `username`, `email` |
 
 **[`CampManagementTest`](Feature/Security/CampManagementTest.php)**: `dashboard/camps/{camp}` bearbeiten und löschen nur als Lagerleitung dieses Lagers (Mitgliedschaft, nicht aktuelle Rolle); nur Formularfelder (`global_camp`, `code`, `finish` usw. werden ignoriert); verantwortliche Person muss Lagerleitung des Lagers sein; beim Löschen wechseln nur Personen ins Global-Camp, die gerade in diesem Lager sind.
+
+**[`RemovedFeaturesTest`](Feature/Security/RemovedFeaturesTest.php)**: Der Cevi-DB-Import der Gesundheitsblätter (`POST dashboard/healthforms/import`) rief mit dem Server-Token `db.cevi.ch` auf und legte Blätter ohne Lager an. Route, Methode und Modal sind entfernt; der Test verhindert mit `Http::preventStrayRequests()` echte Anfragen nach aussen. Das Paket `ixudra/curl` ist entfernt.
 
 **[`AdminRoutesTest`](Feature/Security/AdminRoutesTest.php)**: die Wartungsrouten `admin/run-*` führen Artisan-Befehle aus. Artisan ist im Test gefakt.
 

@@ -130,7 +130,7 @@ class HealthFormAccessTest extends TestCase
     private function updatePayload(string $nickname): array
     {
         return [
-            'submit_btn' => 'Speichern',
+            'submit_btn' => 'save',
             'healthform' => ['nickname' => $nickname],
             'healthinfo' => [],
         ];

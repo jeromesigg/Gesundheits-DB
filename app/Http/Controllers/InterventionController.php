@@ -14,6 +14,7 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
@@ -23,6 +24,15 @@ use Yajra\DataTables\Facades\DataTables;
 
 class InterventionController extends Controller
 {
+    /**
+     * Felder, die das Interventionsformular setzen darf. Zuordnung (health_information_id, intervention_master_id)
+     * Nummern (serial_number, max_serial_number) und Bildpfade (file, nur aus Uploads) bestimmt der Server.
+     */
+    private const FORM_FIELDS = [
+        'date', 'time', 'parameter', 'value', 'medication', 'comment', 'user_erf', 'health_status_id',
+        'further_treatment', 'user_close', 'date_close', 'time_close', 'comment_close',
+    ];
+
     /**
      * Display a listing of the resource.
      *
@@ -176,7 +186,7 @@ class InterventionController extends Controller
     public function store(Request $request)
     {
         //
-        $input = $request->all();
+        $input = Arr::only($request->all(), [...self::FORM_FIELDS, 'health_information_id', 'intervention_id', 'intervention_master_id', 'intervention_new', 'intervention_sub']);
         $user = Auth::user();
         $input['user_id'] = $user['id'];
         $health_information = HealthInformation::findOrFail($input['health_information_id']);
@@ -191,7 +201,7 @@ class InterventionController extends Controller
                 File::makeDirectory($directory, 0775, true);
             }
             $name = Str::uuid().'_'.str_replace(' ', '', $file->getClientOriginalName());
-            Image::make($input['file'])->save($directory.'/'.$name, 80);
+            Image::make($file)->save($directory.'/'.$name, 80);
             $input['file'] = $save_path.'/'.$name;
         }
 
@@ -228,7 +238,7 @@ class InterventionController extends Controller
             $new_interventions = $input['intervention_new'];
             $files_new = $request->file('intervention_new');
             foreach ($new_interventions as $key => $new_intervention) {
-                $input_new = $new_intervention;
+                $input_new = Arr::only($new_intervention, self::FORM_FIELDS);
                 $input_new['user_id'] = $user['id'];
                 $input_new['health_information_id'] = $health_information['id'];
                 if (isset($intervention['intervention_master_id'])) {
@@ -245,7 +255,7 @@ class InterventionController extends Controller
                         File::makeDirectory($directory, 0775, true);
                     }
                     $name = Str::uuid().'_'.str_replace(' ', '', $file_new->getClientOriginalName());
-                    Image::make($input_new['file'])->save($directory.'/'.$name, 80);
+                    Image::make($file_new)->save($directory.'/'.$name, 80);
                     $input_new['file'] = $save_path.'/'.$name;
                 }
 
@@ -259,7 +269,7 @@ class InterventionController extends Controller
             $sub_interventions = $input['intervention_sub'];
             $files_sub = $request->file('intervention_sub');
             foreach ($sub_interventions as $key => $sub_intervention) {
-                $input_sub = $sub_intervention;
+                $input_sub = Arr::only($sub_intervention, [...self::FORM_FIELDS, 'intervention_id']);
                 $input_sub['user_id'] = $user['id'];
 
                 if (! $camp['demo'] && isset($files_sub[$key])) {
@@ -270,7 +280,7 @@ class InterventionController extends Controller
                         File::makeDirectory($directory, 0775, true);
                     }
                     $name = Str::uuid().'_'.str_replace(' ', '', $file_sub->getClientOriginalName());
-                    Image::make($input_sub['file'])->save($directory.'/'.$name, 80);
+                    Image::make($file_sub)->save($directory.'/'.$name, 80);
                     $input_sub['file'] = $save_path.'/'.$name;
                 }
                 $intervention_sub = Intervention::findOrFail($input_sub['intervention_id']);

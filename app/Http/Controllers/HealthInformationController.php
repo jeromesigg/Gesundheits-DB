@@ -139,7 +139,7 @@ class HealthInformationController extends Controller
             if (! file_exists(storage_path($save_path))) {
                 mkdir(storage_path($save_path), 0755, true);
             }
-            $name = 'Notfallblatt.'.$file_protocol->getClientOriginalExtension();
+            $name = 'Notfallblatt.pdf';
 
             $file_protocol->move(storage_path($save_path), $name);
             $input_healthform['file_protocol'] = $save_path.'/'.$name;

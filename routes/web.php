@@ -93,7 +93,6 @@ Route::group(['middleware' => 'verified'], function () {
         Route::get('users/createDataTables', ['as' => 'users.CreateDataTables', 'uses' => 'AdminUsersController@createDataTables']);
         Route::resource('dashboard/questions', 'QuestionController', ['as' => 'dashboard']);
         Route::get('questions/createDataTables', ['as' => 'questions.CreateDataTables', 'uses' => 'QuestionController@createDataTables']);
-        Route::post('dashboard/healthforms/import', ['as' => 'healthforms.import', 'uses' => 'HealthFormController@import']);
         Route::get('dashboard/healthforms/showOrEdit/{healthform}', ['as' => 'healthforms.showOrEdit', 'uses' => 'HealthFormController@showOrEdit']);
         Route::get('dashboard/healthforms/uploadFile', ['as' => 'dashboard.healthforms.uploadFile', 'uses' => 'HealthFormController@UploadFile']);
         Route::get('healthinformation/print/{healthInformation}', ['as' => 'healthinformation.print', 'uses' => 'HealthInformationController@print']);
