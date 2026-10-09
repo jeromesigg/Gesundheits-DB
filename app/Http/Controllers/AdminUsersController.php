@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Helper\Helper;
+use App\Http\Requests\AddCampUserRequest;
+use App\Http\Requests\StoreCampUserRequest;
+use App\Http\Requests\UpdateCampUserRequest;
 use App\Models\Camp;
 use App\Models\CampUser;
 use App\Models\Help;
@@ -10,8 +14,8 @@ use App\Models\Role;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -20,17 +24,11 @@ class AdminUsersController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
-        //
-        $aktUser = Auth::user();
-        if ($aktUser->isAdmin()) {
-            $roles = Role::pluck('name', 'id')->all();
-        } else {
-            $roles = Role::where('id', '>', config('status.role_Administrator'))->pluck('name', 'id')->all();
-        }
+        $roles = Role::whereIn('id', UserRole::assignableValues())->pluck('name', 'id')->all();
         $title = 'Personen';
         $help = Help::where('title', $title)->first();
 
@@ -39,7 +37,6 @@ class AdminUsersController extends Controller
 
     public function createDataTables()
     {
-        //
         $camp = Auth::user()->camp;
         $users = $camp->allusers;
 
@@ -89,33 +86,28 @@ class AdminUsersController extends Controller
     public function searchResponseUser(Request $request)
     {
         $camp = Auth::user()->camp;
-        $allusers = $camp->allusers->pluck('id')->toArray();
+        $members = CampUser::where('camp_id', $camp->id)->pluck('user_id');
 
-        $users = User::where('role_id', '<>', config('status.role_Administrator'))->whereNotIn('id', $allusers)->search($request->get('term'))->get();
-
-        return $users;
+        return User::whereRaw('LOWER(email) = ?', [mb_strtolower(trim((string) $request->get('term')))])
+            ->where('role_id', '<>', UserRole::Administrator)
+            ->whereNotIn('id', $members)
+            ->get(['id', 'username', 'email']);
     }
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function create()
-    {
-        //
-    }
+    public function create() {}
 
-    public function add(Request $request)
+    public function add(AddCampUserRequest $request)
     {
-        $input = $request->all();
         $aktUser = Auth::user();
 
-        if ((! $aktUser->demo) && ($input['user_id'])) {
-            $camp = $aktUser->camp;
-            $user = User::findOrFail($input['user_id']);
-            CampUser::firstOrCreate(['camp_id' => $camp->id, 'user_id' => $user->id],
-                ['role_id' => $input['role_id_add']]);
+        if (! $aktUser->demo) {
+            CampUser::firstOrCreate(['camp_id' => $aktUser->camp_id, 'user_id' => $request->validated('user_id')],
+                ['role_id' => $request->validated('role_id_add')]);
         }
 
         return redirect('/dashboard/users');
@@ -124,36 +116,20 @@ class AdminUsersController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreCampUserRequest $request)
     {
-        //
-        $validator = Validator::make($request->all(), [
-            'username' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->to(url()->previous())
-                ->withErrors($validator)
-                ->withInput();
-        }
-
         $aktUser = Auth::user();
         if (! $aktUser->demo) {
-            if (trim($request->password) == '') {
-                $input = $request->except('password');
-            } else {
-                $input = $request->all();
-                $input['password'] = bcrypt($request->password);
-            }
-            $input['slug'] = Str::slug($input['username']);
-
-            $user = User::create($input);
-            $camp = $aktUser->camp;
-            Helper::updateCamp($user, $camp);
+            $user = User::create([
+                'username' => $request->validated('username'),
+                'email' => $request->validated('email'),
+                'password' => bcrypt($request->validated('password')),
+                'slug' => Str::slug($request->validated('username')),
+                'role_id' => $request->validated('role_id'),
+            ]);
+            Helper::updateCamp($user, $aktUser->camp);
         }
 
         return redirect('/dashboard/users');
@@ -163,29 +139,22 @@ class AdminUsersController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function show($id)
-    {
-        //
-    }
+    public function show($id) {}
 
     /**
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit(User $user)
     {
-        //
-        $aktUser = Auth::user();
-        if ($aktUser->isAdmin()) {
-            $roles = Role::pluck('name', 'id')->all();
-        } else {
-            $roles = Role::where('id', '>', config('status.role_Administrator'))->pluck('name', 'id')->all();
-        }
+        $this->authorize('manage', $user);
+        $roles = Role::whereIn('id', UserRole::assignableValues())->pluck('name', 'id')->all();
         $camp_user = $user->camp_user()->first();
+        $user->role_id = $camp_user->role_id;
         $title = 'Person aktualisieren';
         $help = Help::where('title', $title)->first();
         $help['main_title'] = 'Personen';
@@ -198,44 +167,31 @@ class AdminUsersController extends Controller
      * Update the specified resource in storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function update(Request $request, User $user)
+    public function update(UpdateCampUserRequest $request, User $user)
     {
-        //
-        $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:255',
-            'email' => 'required|max:255|unique:users,email,'.$user['id'],
-            'password' => 'nullable|string|min:8|confirmed',
+        $camp = Auth::user()->camp;
+        $role_id = (int) $request->validated('role_id');
+        $active = $request->filled('active');
+
+        $user->update([
+            'username' => $request->validated('username'),
+            'email' => $request->validated('email'),
+            'slug' => Str::slug($request->validated('username')),
         ]);
-
-        if ($validator->fails()) {
-            return redirect()->to(url()->previous())
-                ->withErrors($validator)
-                ->withInput();
+        if (filled($request->validated('password'))) {
+            $user->update(['password' => bcrypt($request->validated('password'))]);
         }
-        //        if (!$user->demo) {
-        if (trim($request->password) == '') {
-            $input = $request->except('password');
-        } else {
-            $input = $request->all();
-            $input['password'] = bcrypt($request->password);
+        $user->camp_user()->first()->update(['role_id' => $role_id, 'active' => $active]);
+        if ($user->camp_id === $camp->id) {
+            $user->update(['role_id' => $role_id]);
         }
-        $input['slug'] = Str::slug($input['username']);
-
-        $user->update($input);
-        $input_camp_user['active'] = isset($input['active']);
-        $camp_user = $user->camp_user()->first();
-        $camp_user->update($input_camp_user);
-        if (! $input_camp_user['active']) {
-            $camp = Auth::user()->camp;
-            if ($user->camp['id'] === $camp['id']) {
-                $camp_global = Camp::where('global_camp', true)->first();
-                Helper::updateCamp($user, $camp_global);
-            }
+        if (! $active && $user->camp_id === $camp->id) {
+            $camp_global = Camp::where('global_camp', true)->first();
+            Helper::updateCamp($user, $camp_global);
         }
 
-        //        }
         return redirect('/dashboard/users');
     }
 
@@ -243,11 +199,11 @@ class AdminUsersController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy(User $user)
     {
-        //
+        $this->authorize('manage', $user);
         $aktUser = Auth::user();
         if (! $aktUser->demo) {
             $camp = $aktUser->camp;

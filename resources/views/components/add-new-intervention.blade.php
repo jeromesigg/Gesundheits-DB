@@ -1,5 +1,5 @@
 <div id="{{'intervention_new_'.$index}}">
-    <hr class="h-0.5 mx-auto my-4 bg-gray-300 border-0 rounded md:my-10 dark:bg-gray-700">
+    <hr class="h-0.5 mx-auto my-4 bg-gray-300 border-0 rounded-sm md:my-10 dark:bg-gray-700">
     <x-forms.row class="ml-10">
         <x-forms.container class="col-xl-2 col-lg-12">
             <x-forms.hidden name="intervention_new['.$index.'][health_information_id]" :value="$intervention['health_information_id']"/>

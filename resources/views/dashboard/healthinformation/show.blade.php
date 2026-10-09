@@ -58,7 +58,7 @@
                             </x-forms.container>
                         </x-forms.row>
                         @foreach($interventions as $key => $intervention_sub)
-                            <hr class="h-0.5 mx-auto my-4 bg-gray-300 border-0 rounded md:my-10 dark:bg-gray-700">
+                            <hr class="h-0.5 mx-auto my-4 bg-gray-300 border-0 rounded-sm md:my-10 dark:bg-gray-700">
                             <p>Intervention Nr. {{$intervention_sub->number()}}</p>
                             <x-forms.row class="ml-10">
                                 <x-forms.container class="col-xl-2 col-lg-12">
@@ -113,14 +113,14 @@
                         
                         <div class="form-group">
                         
-                            <x-forms.button type="submit" class="btn text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" id="submit_btn">
+                            <x-forms.button type="submit" class="btn text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-hidden dark:focus:ring-blue-800" id="submit_btn">
                                 @isset($intervention['id']) {{ __('Intervention aktualisieren') }} @else {{ __('Intervention speichern') }} @endisset
                             </x-forms.button>
                             @if(!isset($intervention['intervention_master_id']))
-                                <a href="#" class="btn focus:outline-none text-white bg-purple-700 hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-2 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-900" role="button" id="addIntervention">Untergeordnete Intervention hinzufügen</a>
+                                <a href="#" class="btn focus:outline-hidden text-white bg-purple-700 hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-2 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-900" role="button" id="addIntervention">Untergeordnete Intervention hinzufügen</a>
                             @endif
                             @if(!isset($intervention['date_close']) && !$intervention['to_close'])
-                                <a href="#" class="btn focus:outline-none text-white bg-purple-700 hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-2 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-900" role="button" id="closeIntervention">Intervention abschliessen</a>
+                                <a href="#" class="btn focus:outline-hidden text-white bg-purple-700 hover:bg-purple-800 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-2 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-900" role="button" id="closeIntervention">Intervention abschliessen</a>
                             @endif
                         </div>
                     </x-forms.form>

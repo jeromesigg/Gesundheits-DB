@@ -8,4 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class Role extends Model
 {
     use HasFactory;
+
+    protected $casts = [
+        'is_admin' => 'boolean',
+        'is_manager' => 'boolean',
+        'is_helper' => 'boolean',
+    ];
 }

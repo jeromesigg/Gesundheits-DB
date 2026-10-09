@@ -30,14 +30,6 @@
                     </x-forms.form>
                 </div>
                 <div class="col-lg-3">
-                    @if (config('app.import_db'))
-                        <div class="col-lg-4">
-                            <button id="showImport" class="btn btn-primary btn-sm"
-                                    title="{{$has_api_token ? '' : 'Deine Region hat den DB-Import nicht freigeschalten.' }}" {{$has_api_token ? '' : 'disabled'}}>
-                                Personen aus Cevi-DB importieren
-                            </button>
-                        </div>
-                    @endif
                     @if ($errors->any())
                         <div class="alert alert-danger">
                             <ul>
@@ -99,31 +91,6 @@
             </div>
         </div>
     </section>
-    <div class="modal fade" id="importModal" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title" id="modelHeading">Personen aus Cevi-DB importieren</h4>
-                </div>
-                <div class="modal-body">
-                    <p>Vorraussetzungen für DB-Import:</p>
-                    <ul>
-                        <li>Zugewiesene Gruppe für den Kurs.</li>
-                        <li>Zugewiesene Kurs ID für den Kurs.</li>
-                    </ul>
-                    <p>Erstellte Personen können sich über die Cevi-DB anmelden.</p>
-                    <form id="modal-form" method="POST" action="javascript:void(0)">
-                        <div class="form-group">
-{{--                            <button data-remote='{{route('users.import')}}' id="importUsers"--}}
-{{--                                    class="btn btn-primary btn-sm"><i class="fa fa-spinner fa-spin display-none"--}}
-{{--                                                                      id="loading-spinner"></i> Personen importieren--}}
-{{--                            </button>--}}
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
 @endsection
 
 @push('scripts')

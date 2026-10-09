@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Help;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 
@@ -30,19 +30,11 @@ class UsersController extends Controller
         return redirect('/dashboard');
     }
 
-    public function update(Request $request, User $user)
+    public function update(ProfileUpdateRequest $request, User $user)
     {
-        if (trim($request->password) == '') {
-            $input = $request->except('password');
-            $user->update($input);
-        } else {
-            $request->validate([
-                'password' => ['required', 'confirmed'],
-            ]);
-            $input = $request->all();
-            $input['password'] = bcrypt($request->password);
-            $input['password_change_at'] = now();
-            $user->update($input);
+        $user->update(['email' => $request->validated('email')]);
+        if (filled($request->validated('password'))) {
+            $user->update(['password' => bcrypt($request->validated('password'))]);
             Session::flash('message', 'Passwort erfolgreich verändert!');
         }
 

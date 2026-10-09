@@ -53,23 +53,6 @@
             </div>
         </div>
     </section>
-    <div class="modal fade" id="importModal" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h4 class="modal-title" id="modelHeading">Gesundsheitsblätter aus Cevi-DB importieren</h4>
-                </div>
-                <div class="modal-body">
-                    <form id="modal-form" method="POST" action="javascript:void(0)">
-                        <div class="form-group">
-                            <button data-remote='{{route('healthforms.import')}}' id="importUsers" class="btn btn-primary btn-sm"><i class="fa fa-spinner fa-spin display-none" id="loading-spinner"></i> Gesundsheitsblätter importieren</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
 @endsection
 @push('scripts')
 <script type="module">
@@ -97,35 +80,6 @@
             });
             
             initFlowbite();
-        });
-        $('#showImport').on('click', function () {
-            $('#importModal').modal('show');
-        });
-
-        $('#importUsers').on('click', function () {
-
-            $.ajaxSetup({
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                }
-            });
-            var url = $(this).data('remote');
-            // confirm then
-            $.ajax({
-                url: url,
-                method: 'POST',
-                beforeSend: function() { $('#loading-spinner').removeClass('display-none')},
-                complete: function() {  $('#loading-spinner').addClass('display-none') },
-                success:function(res)
-                {
-                    $('#modal-form').trigger('reset');
-                    $('#importModal').modal('hide');
-                    location.reload();
-                },
-                error: function(xhr, errorType, exception) {
-                    alert(exception + ': ' + xhr.responseJSON.message);
-                }
-            });
         });
     </script>
 @endpush

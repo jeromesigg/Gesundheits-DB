@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use App\Helper\Helper;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -46,6 +47,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
         'demo' => 'boolean',
+        'role_id' => UserRole::class,
     ];
 
     protected $searchable = [
@@ -54,19 +56,19 @@ class User extends Authenticatable implements MustVerifyEmail
         ],
     ];
 
-    public function isAdmin()
+    public function isAdmin(): bool
     {
-        return $this->role['is_admin'];
+        return $this->role_id === UserRole::Administrator;
     }
 
-    public function isManager()
+    public function isManager(): bool
     {
-        return $this->role['is_manager'] || $this->isAdmin();
+        return $this->role_id?->canManage() ?? false;
     }
 
-    public function isHelper()
+    public function isHelper(): bool
     {
-        return $this->role['is_helper'] || $this->isManager();
+        return $this->role_id?->canHelp() ?? false;
     }
 
     public function camp_user()
@@ -79,7 +81,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function camp_users()
     {
         return $this->hasMany(CampUser::class)
-            ->where('camp_users.role_id', '<>', config('status.role_Administrator'))
+            ->where('camp_users.role_id', '<>', UserRole::Administrator)
             ->where('camp_users.active', '=', true);
     }
 
