@@ -8,7 +8,7 @@
         </svg>
     </button>
     <div
-        class="hidden z-50 my-4 w-56 text-base list-none navbar-background divide-y divide-gray-100 shadow-xs dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+        class="hidden z-50 my-4 w-56 text-base list-none navbar-background divide-y divide-gray-100 dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
         id="dropdown-manager">
         <ul aria-labelledby="dropdown-manager" class="h-dropdown py-1 text-gray-700 dark:text-gray-300 overflow-y-auto" >
             <li>

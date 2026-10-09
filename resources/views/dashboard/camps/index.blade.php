@@ -60,7 +60,7 @@
                                     <td>
                                         @if (!$camp->finish && Auth::user()->camp['id'] === $camp['id'])
                                             <x-forms.form :action="route('dashboard.camps.destroy', $camp)" method="DELETE" :model="$camp" id="DeleteForm">
-                                                <x-forms.button type="submit" name="submit-delete" class="confirm-finish focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">
+                                                <x-forms.button type="submit" name="submit-delete" class="confirm-finish focus:outline-hidden text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">
                                                     Lager abschliessen?
                                                 </x-forms.button>
                                             </x-forms.form>
