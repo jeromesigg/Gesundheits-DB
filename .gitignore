@@ -14,3 +14,6 @@ yarn-error.log
 /public/images
 /test/
 test-results
+.claude
+# Versehentlich eingecheckte Uploads (absoluter Pfad als Unterordner von storage/)
+/storage/var/

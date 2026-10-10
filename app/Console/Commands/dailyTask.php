@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\TrafficLight;
 use App\Models\Camp;
 use App\Models\Group;
 use Illuminate\Console\Command;
@@ -42,6 +43,9 @@ class dailyTask extends Command
             'counter' => 0,
         ]);
         $camp = Camp::where('demo', true)->first();
+        if ($camp === null) {
+            return;
+        }
         $interventions = $camp->interventions()->get();
         foreach ($interventions as $intervention) {
             $intervention->update([
@@ -68,7 +72,7 @@ class dailyTask extends Command
                 'ointment_only_contact' => false,
                 'chronicle_diseases' => null,
                 'allergy' => null,
-                'health_status_id' => config('status.health_green'),
+                'health_status_id' => TrafficLight::Green,
                 'accept_privacy_agreement' => false,
             ]);
         }

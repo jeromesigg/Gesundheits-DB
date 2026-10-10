@@ -2,20 +2,26 @@
 
 namespace App\Exports;
 
+use App\Models\Camp;
 use App\Models\HealthForm;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
 class HealthFormsExport implements FromCollection, WithHeadings, WithMapping
 {
+    public function __construct(public Camp $camp) {}
+
     /**
-     * @return \Illuminate\Support\Collection
+     * Nur die Gesundheitsblätter dieses Lagers.
+     *
+     * @return Collection
      */
     public function collection()
     {
-        return HealthForm::all();
+        return HealthForm::where('camp_id', $this->camp->id)->get();
     }
 
     public function map($healthform): array

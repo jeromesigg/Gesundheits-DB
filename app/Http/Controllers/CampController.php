@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Events\CampCreated;
 use App\Helper\Helper;
 use App\Models\Camp;
@@ -9,6 +10,7 @@ use App\Models\CampUser;
 use App\Models\Help;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Validator;
 
@@ -17,7 +19,7 @@ class CampController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -27,7 +29,7 @@ class CampController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -45,7 +47,7 @@ class CampController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -73,11 +75,11 @@ class CampController extends Controller
             $input['konekta'] = isset($input['konekta']);
             $camp = Camp::create($input);
             CampCreated::dispatch($camp);
-            $user->update(['camp_id' => $camp->id, 'role_id' => config('status.role_Lagerleiter')]);
+            $user->update(['camp_id' => $camp->id, 'role_id' => UserRole::CampLeader]);
             CampUser::create([
                 'user_id' => $user->id,
                 'camp_id' => $camp->id,
-                'role_id' => config('status.role_Lagerleiter'), ]);
+                'role_id' => UserRole::CampLeader, ]);
         }
 
         return redirect('dashboard');
@@ -86,7 +88,7 @@ class CampController extends Controller
     /**
      * Display the specified resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show(Camp $camp)
     {
@@ -96,7 +98,7 @@ class CampController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit(Camp $camp)
     {
@@ -106,11 +108,12 @@ class CampController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, Camp $camp)
     {
         //
+        $this->authorize('switchTo', $camp);
         if (! Auth::user()->demo) {
             Helper::updateCamp(Auth::user(), $camp);
         }
@@ -121,7 +124,7 @@ class CampController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy(Camp $camp)
     {

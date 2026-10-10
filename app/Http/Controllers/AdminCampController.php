@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Events\CampCreated;
 use App\Helper\Helper;
+use App\Http\Requests\UpdateCampRequest;
 use App\Models\Camp;
 use App\Models\Help;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 
@@ -17,11 +20,10 @@ class AdminCampController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
-        //
         $aktUser = Auth::user();
         if (! $aktUser) {
             return redirect('/dashboard');
@@ -47,21 +49,17 @@ class AdminCampController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function create()
-    {
-        //
-    }
+    public function create() {}
 
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
-        //
         $input = $request->all();
 
         if (! Auth::user()->demo) {
@@ -90,23 +88,20 @@ class AdminCampController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function show($id)
-    {
-        //
-    }
+    public function show($id) {}
 
     /**
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit(Camp $camp)
     {
-        //
-        $users = User::where('role_id', config('status.role_Lagerleiter'))->pluck('username', 'id')->all();
+        $this->authorize('manage', $camp);
+        $users = $camp->allUsers()->wherePivot('role_id', UserRole::CampLeader->value)->pluck('username', 'users.id')->all();
 
         $title = 'Lager aktualisieren';
         $help = Help::where('title', $title)->first();
@@ -123,19 +118,24 @@ class AdminCampController extends Controller
      * Update the specified resource in storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function update(Request $request, Camp $camp)
+    public function update(UpdateCampRequest $request, Camp $camp)
     {
         if (! Auth::user()->demo) {
-            $input = $request->all();
-            $input['independent_form_fill'] = isset($input['independent_form_fill']);
-            $input['forms_finished'] = isset($input['closed_when_finished']);
-            $input['closed_when_finished'] = isset($input['closed_when_finished']);
-            $input['show_names'] = isset($input['show_names']);
-            $input['konekta'] = isset($input['konekta']);
-            $camp->update($input);
-            Helper::updateGroup($camp, $input['group_text']);
+            $camp->update([
+                'name' => $request->validated('name'),
+                'end_date' => $request->validated('end_date'),
+                'independent_form_fill' => $request->filled('independent_form_fill'),
+                'forms_finished' => $request->filled('closed_when_finished'),
+                'closed_when_finished' => $request->filled('closed_when_finished'),
+                'show_names' => $request->filled('show_names'),
+                'group_text' => $request->validated('group_text'),
+            ]);
+            if ($request->filled('user_id')) {
+                $camp->update(['user_id' => $request->validated('user_id')]);
+            }
+            Helper::updateGroup($camp, $request->validated('group_text'));
         }
 
         return redirect('/dashboard/camps');
@@ -145,15 +145,15 @@ class AdminCampController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy(Camp $camp)
     {
+        $this->authorize('manage', $camp);
         if (! Auth::user()->demo) {
-            $users = Auth::user()->camp->allUsers;
             $camp_global = Camp::where('global_camp', true)->first();
 
-            foreach ($users as $user) {
+            foreach (User::where('camp_id', $camp->id)->get() as $user) {
                 Helper::updateCamp($user, $camp_global);
             }
             foreach ($camp->camp_users_all()->get() as $camp_user) {

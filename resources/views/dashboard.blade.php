@@ -14,7 +14,7 @@
     @endif
     <div class="justify-content-center">
         <div class="card">
-            @if(!Auth::user()->camp['global_camp'])
+            @if(!Auth::user()->camp['global_camp'] && Auth::user()->isHelper())
                 <div class="container">
                     <div class="row">
                         <div class="col-lg-6">
@@ -62,6 +62,11 @@
                         </table>
                     </div>
                 @endif
+            @elseif(!Auth::user()->camp['global_camp'])
+                <div class="container p-4">
+                    <h4><b>Lager "{{ $camp['name'] }}"</b></h4>
+                    <p>Du bist in diesem Lager als Teilnehmer*in eingetragen und hast keinen Zugriff auf Gesundheitsdaten.</p>
+                </div>
             @else
                 <div class="container p-4">
                     <h4><b>Kein Lager zugewiesen</b></h4>

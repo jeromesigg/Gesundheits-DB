@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\Camp;
 use App\Models\CampUser;
 use App\Models\HealthForm;
@@ -28,7 +29,7 @@ class DemoCampSeeder extends Seeder
                 'slug' => 'lagerleiter@demo',
                 'password' => Hash::make('lagerleiter@demo'),
                 'email_verified_at' => now(),
-                'role_id' => config('status.role_Lagerleiter'),
+                'role_id' => UserRole::CampLeader,
                 'camp_id' => 1,
                 'demo' => true]);
         $camp = Camp::updateOrCreate([
@@ -42,12 +43,12 @@ class DemoCampSeeder extends Seeder
         CampUser::updateOrCreate([
             'camp_id' => $camp['id'],
             'user_id' => $user['id']], [
-                'role_id' => config('status.role_Lagerleiter'),
+                'role_id' => UserRole::CampLeader,
             ]);
         CampUser::updateOrCreate([
             'camp_id' => 1,
             'user_id' => $user['id']], [
-                'role_id' => config('status.role_Teilnehmer'),
+                'role_id' => UserRole::Participant,
             ]);
         $user_leiter1 = User::updateOrCreate([
             'username' => 'leiter1@demo'], [
@@ -55,18 +56,18 @@ class DemoCampSeeder extends Seeder
                 'slug' => 'leiter1@demo',
                 'password' => Hash::make('leiter1@demo'),
                 'email_verified_at' => now(),
-                'role_id' => config('status.role_Helfer'),
+                'role_id' => UserRole::Helper,
                 'camp_id' => $camp['id'],
                 'demo' => true]);
         CampUser::updateOrCreate([
             'camp_id' => $camp['id'],
             'user_id' => $user_leiter1['id']], [
-                'role_id' => config('status.role_Helfer'),
+                'role_id' => UserRole::Helper,
             ]);
         CampUser::updateOrCreate([
             'camp_id' => 1,
             'user_id' => $user_leiter1['id']], [
-                'role_id' => config('status.role_Teilnehmer'),
+                'role_id' => UserRole::Participant,
             ]);
         $user_leiter2 = User::updateOrCreate([
             'username' => 'leiter2@demo'], [
@@ -74,18 +75,18 @@ class DemoCampSeeder extends Seeder
                 'slug' => 'leiter2@demo',
                 'password' => Hash::make('leiter2@demo'),
                 'email_verified_at' => now(),
-                'role_id' => config('status.role_Helfer'),
+                'role_id' => UserRole::Helper,
                 'camp_id' => $camp['id'],
                 'demo' => true]);
         CampUser::updateOrCreate([
             'camp_id' => $camp['id'],
             'user_id' => $user_leiter2['id']], [
-                'role_id' => config('status.role_Helfer'),
+                'role_id' => UserRole::Helper,
             ]);
         CampUser::updateOrCreate([
             'camp_id' => 1,
             'user_id' => $user_leiter2['id']], [
-                'role_id' => config('status.role_Teilnehmer'),
+                'role_id' => UserRole::Participant,
             ]);
         if (count($camp->health_infos) === 0) {
             for ($i = 0; $i < 20; $i++) {

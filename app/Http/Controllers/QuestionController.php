@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\HealthInformation;
+use App\Models\HealthInformationQuestion;
 use App\Models\Help;
 use App\Models\Question;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -13,11 +16,10 @@ class QuestionController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
-        //
         $healthinformation = [];
         $title = 'Individuelle Fragen';
         $help = Help::where('title', $title)->first();
@@ -27,7 +29,6 @@ class QuestionController extends Controller
 
     public function createDataTables()
     {
-        //
         $akt_User = Auth::user();
         $camp = $akt_User->camp;
         $questions = $camp->questions();
@@ -44,26 +45,23 @@ class QuestionController extends Controller
             ->make(true);
     }
 
-    public function create(Request $request)
-    {
-        //
-    }
+    public function create(Request $request) {}
 
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
-        //
-        $input = $request->all();
-        $akt_User = Auth::user();
-        $camp = $akt_User->camp;
+        $input = $request->only(['name', 'sortindex']);
         $input['active'] = true;
-        $input['camp_id'] = $camp['id'];
+        $input['camp_id'] = Auth::user()->camp_id;
 
-        Question::create($input);
+        $question = Question::create($input);
+        foreach (HealthInformation::where('camp_id', $question->camp_id)->pluck('id') as $healthInformationId) {
+            HealthInformationQuestion::create(['question_id' => $question->id, 'health_information_id' => $healthInformationId]);
+        }
 
         return redirect()->back();
 
@@ -72,22 +70,18 @@ class QuestionController extends Controller
     /**
      * Display the specified resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function show(Question $question)
-    {
-        //
-
-    }
+    public function show(Question $question) {}
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit(Question $question)
     {
-        //
+        $this->authorize('manage', $question);
         $title = 'Individuelle Frage aktualisieren';
         $help = Help::where('title', $title)->first();
         $help['main_title'] = 'Individuelle Fragen';
@@ -99,14 +93,14 @@ class QuestionController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, Question $question)
     {
-        //
+        $this->authorize('manage', $question);
         if (! Auth::user()->demo) {
-            $input = $request->all();
-            $input['active'] = isset($input['active']);
+            $input = $request->only(['name', 'sortindex']);
+            $input['active'] = $request->has('active');
             $question->update($input);
         }
 
@@ -116,12 +110,12 @@ class QuestionController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\HealthInformation  $healthInformation
-     * @return \Illuminate\Http\Response
+     * @param  HealthInformation  $healthInformation
+     * @return Response
      */
     public function destroy(Question $question)
     {
-        //
+        $this->authorize('manage', $question);
         $question->delete();
     }
 }

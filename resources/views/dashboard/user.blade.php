@@ -2,7 +2,7 @@
 
 @section('page')
     <x-page-title :title="$title" :help="$help" :subtitle="$subtitle"/>
-        <x-forms.form :action="route('dashboard.users.update', $aktUser)" accept-charset="UTF-8" method="PATCH" :model="$aktUser">
+        <x-forms.form :action="route('dashboard.update', $aktUser)" accept-charset="UTF-8" method="PATCH" :model="$aktUser">
             @if ($errors->any())
                 <div class="alert alert-danger">
                     <ul>

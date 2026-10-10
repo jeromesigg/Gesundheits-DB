@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TrafficLight;
 use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,10 @@ class HealthInformation extends Model implements Auditable
     use HasUuid;
     use \OwenIt\Auditing\Auditable;
     use SearchableTrait;
+
+    protected $casts = [
+        'health_status_id' => TrafficLight::class,
+    ];
 
     protected $fillable = [
         'code', 'recent_issues', 'recent_issues_doctor', 'drug_longterm', 'drug_demand', 'drug_emergency', 'drugs_only_contact',

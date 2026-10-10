@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Exports\HealthFormsExport;
 use App\Helper\Helper;
+use App\Http\Requests\HealthFormUpdateRequest;
+use App\Http\Requests\ImportHealthFormsRequest;
+use App\Http\Requests\StoreHealthFormRequest;
+use App\Imports\HealthFormImportRow;
 use App\Imports\HealthFormsImport;
 use App\Models\Camp;
 use App\Models\City;
@@ -12,14 +16,14 @@ use App\Models\HealthForm;
 use App\Models\HealthInformation;
 use App\Models\HealthInformationQuestion;
 use App\Models\Help;
-use App\Models\User;
+use App\Policies\HealthFormPolicy;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
-use Ixudra\Curl\Facades\Curl;
 use Maatwebsite\Excel\Facades\Excel;
-use Validator;
 use Yajra\DataTables\Facades\DataTables;
 
 class HealthFormController extends Controller
@@ -27,7 +31,7 @@ class HealthFormController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
@@ -79,7 +83,7 @@ class HealthFormController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -101,24 +105,18 @@ class HealthFormController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreHealthFormRequest $request)
     {
-        //
-        $input = $request->all();
+        $input = $request->validated();
         $code = Helper::generateUniqueCode();
         $camp = Auth::user()->camp;
         $input['code'] = Crypt::encryptString($code);
         $input['camp_id'] = $camp['id'];
         $healthform = HealthForm::create($input);
-        $healthinfo = HealthInformation::create(['code' => $code, 'camp_id' => $camp['id']]);
-        Helper::updateGroup($healthform, $input['group_text']);
-        $questions = $camp->questions;
-        foreach ($questions as $question) {
-            HealthInformationQuestion::create(['question_id' => $question['id'],
-                'health_information_id' => $healthinfo['id']]);
-        }
+        $healthinfo = Helper::createHealthInformation($camp, $code);
+        Helper::updateGroup($healthform, $input['group_text'] ?? null);
         if ($camp['independent_form_fill']) {
             $title = 'Gesundheitsblätter';
             $help = Help::where('title', $title)->first();
@@ -134,96 +132,41 @@ class HealthFormController extends Controller
         }
     }
 
-    public function uploadFile(Request $request)
+    public function uploadFile(ImportHealthFormsRequest $request)
     {
-        if ($request->hasFile('file')) {
+        $rows = (new HealthFormsImport)->toArray($request->file('file'))[0];
+        $camp = Auth::user()->camp;
+        $invalidRows = [];
 
-            $array = (new HealthFormsImport)->toArray(request()->file('file'));
-            $importData_arr = $array[0];
-            foreach ($importData_arr as &$importData) {
-                if (! empty($importData['geburtstag'])) {
-                    if (is_numeric($importData['geburtstag'])) {
-                        $dayCarbon = Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($importData['geburtstag']));
-                        $day = Carbon::parse($dayCarbon)->format('Y-m-d');
-                        $importData['geburtstag'] = $day;
-                    } else {
-                        $importData['geburtstag'] = trim($importData['geburtstag']);
-                        $day = Carbon::parse($importData['geburtstag'])->format('Y-m-d');
-                        $importData['geburtstag'] = $day;
-
-                    }
-                }
-                $importData['ceviname'] = $importData['ceviname'] ? $importData['ceviname'] : $importData['vorname'];
-
+        foreach ($rows as $index => $row) {
+            $attributes = HealthFormImportRow::attributes($row);
+            if ($attributes['ahv'] === '' || HealthFormImportRow::isEmpty($row['geburtstag'] ?? null)) {
+                continue;
             }
+            if ($attributes['birthday'] === null) {
+                $invalidRows[] = $index + 2;
 
-            $camp = Auth::user()->camp;
-
-            // Insert to MySQL database
-            foreach ($importData_arr as $importData_row) {
-                if (! empty(trim($importData_row['ahv_nr'])) && ! empty(trim($importData_row['geburtstag']))) {
-                    $group = Group::where('short_name', '=', $importData_row['abteilung'])->first();
-                    $code = Helper::generateUniqueCode();
-                    $insertData = [
-
-                        'code' => Crypt::encryptString($code),
-                        'first_name' => trim($importData_row['vorname']),
-                        'last_name' => trim($importData_row['nachname']),
-                        'nickname' => trim($importData_row['ceviname']),
-                        'street' => trim($importData_row['strasse']),
-                        'zip_code' => trim($importData_row['plz']),
-                        'city' => trim($importData_row['ort']),
-                        'birthday' => trim($importData_row['geburtstag']),
-                        'ahv' => trim($importData_row['ahv_nr']),
-                        'group_id' => $group ? $group['id'] : null,
-                        'group_text' => $importData_row['abteilung'],
-                        'camp_id' => $camp['id'],
-                    ];
-                    HealthForm::firstOrCreate(['ahv' => $importData_row['ahv_nr'], 'camp_id' => $camp['id']], $insertData);
-                    HealthInformation::firstOrCreate(['code' => $code, 'camp_id' => $camp['id']]);
-                }
+                continue;
+            }
+            $code = Helper::generateUniqueCode();
+            $group = Group::where('short_name', '=', $attributes['group_text'])->first();
+            $healthform = HealthForm::firstOrCreate(['ahv' => $attributes['ahv'], 'camp_id' => $camp['id']], $attributes + [
+                'code' => Crypt::encryptString($code),
+                'group_id' => $group ? $group['id'] : null,
+                'camp_id' => $camp['id'],
+            ]);
+            if ($healthform->wasRecentlyCreated) {
+                Helper::createHealthInformation($camp, $code);
             }
         }
 
-        return redirect()->action('HealthFormController@index');
-
-    }
-
-    public function import()
-    {
-        $response = Curl::to('https://db.cevi.ch/groups/'.config('app.group_id').'/events/'.config('app.event_id').'/participations.json')
-            ->withData(['token' => config('app.token')])
-            ->get();
-        $response = json_decode($response);
-        $participants = $response->event_participations;
-        foreach ($participants as $participant) {
-            $user = User::where('id', '=', $participant->id)->first();
-            if (! $user) {
-                $group = Group::on('mysql_info')->where('id', '=', $participant->ortsgruppe_id)->first();
-                if (! $group) {
-                    $group_id = 2;
-                } else {
-                    $group_id = $group['id'];
-                }
-                $code = Helper::generateUniqueCode();
-                $insertData = [
-                    //                        'id' => $participant->id,
-                    'code' => Crypt::encryptString($code),
-                    'nickname' => $participant->nickname ? $participant->nickname : $participant->first_name,
-                    'last_name' => $participant->last_name,
-                    'first_name' => $participant->first_name,
-                    'street' => $participant->address,
-                    'zip_code' => $participant->zip_code,
-                    'city' => $participant->town,
-                    'group_id' => $group_id,
-                    'birthday' => $participant->birthday,
-                ];
-                HealthForm::create($insertData);
-                HealthInformation::create(['code' => $code]);
-            }
+        $redirect = redirect()->route('healthforms.index');
+        if ($invalidRows !== []) {
+            $redirect->with('message', 'Zeilen '.implode(', ', $invalidRows).' übersprungen: Geburtstag nicht erkannt. '
+                .'Erlaubt sind TT.MM.JJJJ, TT/MM/JJJJ, JJJJ-MM-TT oder ein Excel-Datum.');
         }
 
-        return true;
+        return $redirect;
     }
 
     public function NewCode(HealthForm $healthform)
@@ -239,12 +182,12 @@ class HealthFormController extends Controller
 
     public function downloadFile()
     {
-        return Excel::download(new HealthFormsExport, 'Teilnehmerliste.xlsx');
+        return Excel::download(new HealthFormsExport(Auth::user()->camp), 'Teilnehmerliste.xlsx');
     }
 
     public function show(HealthForm $healthform)
     {
-        //
+        $this->authorize('access', $healthform);
         $healthinfo = Helper::getHealthInfo($healthform['code']);
         $title = 'Gesundheitsblatt anzeigen';
         $help = Help::where('title', $title)->first();
@@ -257,7 +200,7 @@ class HealthFormController extends Controller
 
     public function showOrEdit(HealthForm $healthform)
     {
-        //
+        $this->authorizeCamp($healthform->camp_id);
         $camp = Auth::user()->camp;
         $healthinfo = Helper::getHealthInfo($healthform['code']);
         if ($camp['independent_form_fill'] || ($healthform['finish'] && $camp['forms_finished'])) {
@@ -283,6 +226,7 @@ class HealthFormController extends Controller
 
     public function downloadPDF(HealthForm $healthform)
     {
+        $this->authorize('access', $healthform);
         $healthinfo = Helper::getHealthInfo($healthform['code']);
 
         return view('healthform.print', compact('healthform', 'healthinfo'));
@@ -290,6 +234,7 @@ class HealthFormController extends Controller
 
     public function open(HealthForm $healthform)
     {
+        $this->authorizeCamp($healthform->camp_id);
         $input['finish'] = false;
         $input['date_finished'] = null;
         $healthform->update($input);
@@ -299,74 +244,40 @@ class HealthFormController extends Controller
 
     public function edit(Request $request)
     {
-        //
-
         $input = $request->all();
+        if (! $request->filled(['camp_code', 'code'])) {
+            return $this->showUnlockedForm($request);
+        }
         $camp = Camp::where('code', $input['camp_code'])->first();
         if (isset($camp) && ($camp->count() > 0) && ! $camp['finish']) {
             //            $healthform = HealthForm::where('code', 'LIKE', '%' . Crypt::encrypt($input['code']) . '%')->first();
             $code = $input['code'];
-            $healthform = HealthForm::all()->filter(function ($record) use ($code) {
-                if ($record->code == $code) {
-                    return $record;
-                }
-            })->first();
+            $healthform = HealthForm::where('camp_id', $camp->id)->where('code_hash', HealthForm::hashCode($code))->first();
             if ($healthform == null) {
                 return redirect()->to(url()->previous())
                     ->withErrors('Kein Gesundheitsblatt mit den Eingaben gefunden.')->withInput();
             }
-            $healthinfo = Helper::getHealthInfo($healthform['code']);
-            $title = 'Hallo';
-            $subtitle = ' '.$healthform['nickname'].' ('.$healthform['code'].')';
-            $help = Help::where('title', $title)->first();
-            if ($healthform['finish'] && $camp['forms_finished']) {
-                return view('healthform.show', compact('healthform', 'healthinfo', 'title', 'subtitle', 'help'));
-            } else {
-                $health_questions = $healthinfo->questions;
+            $request->session()->push(HealthFormPolicy::UNLOCKED_SESSION_KEY, $healthform->id);
 
-                return view('healthform.edit', compact('healthform', 'healthinfo', 'health_questions', 'title', 'subtitle', 'help', 'camp'));
-            }
+            return $this->participantFormView($healthform, $camp);
         } else {
             return redirect()->to(url()->previous())
                 ->withErrors('Kein Gesundheitsblatt mit den Eingaben gefunden.')->withInput();
         }
     }
 
-    public function update(Request $request, HealthForm $healthform)
+    public function update(HealthFormUpdateRequest $request, HealthForm $healthform)
     {
-        //
-        $input = $request->all();
-        if ($input['submit_btn'] == 'Gesundheitsblatt abschliessen') {
-            $validator = Validator::make($request->all(), [
-                'healthform.file_allergies' => 'mimes:pdf|max:2000',
-                'healthinfo.accept_privacy_agreement' => 'required',
-            ], [
-                'healthform.file_allergies.max' => 'Die maximale Dateigrösse beträgt 2 MB.',
-                'healthform.file_allergies.mimes' => 'Nur PDF-Dateien sind erlaubt.',
-                'healthinfo.accept_privacy_agreement.required' => 'Für den Abschluss brauchen wir deine Bestätigung.', ]);
-        } else {
-            if ($request->hasFile('healthform.file_allergies')) {
-                $validator = Validator::make($request->all(), [
-                    'healthform.file_allergies' => 'mimes:pdf|max:2000',
-                ], [
-                    'healthform.file_allergies.max' => 'Die maximale Dateigrösse beträgt 2 MB.',
-                    'healthform.file_allergies.mimes' => 'Nur PDF-Dateien sind erlaubt.', ]);
-            } else {
-                $validator = Validator::make($request->all(), []);
-            }
-        }
-
-        if ($validator->fails()) {
-            return redirect()->to(url(null, ['camp_code' => 1234])->previous())
-                ->withErrors($validator)
-                ->withInput();
-        }
-        $input_healthinfo = $input['healthinfo'];
-        $input_healthform = $input['healthform'];
-        $input_health_questions = [];
-        if (isset($input['health_question'])) {
-            $input_health_questions = $input['health_question'];
-        }
+        $finish = $request->input('submit_btn') === 'close';
+        $input_healthform = Arr::only($request->input('healthform', []), [
+            'nickname', 'first_name', 'last_name', 'street', 'zip_code', 'city', 'birthday', 'phone_number',
+            'emergency_contact_name', 'emergency_contact_address', 'emergency_contact_phone',
+            'doctor_contact', 'health_insurance_contact', 'accident_insurance_contact', 'vaccination',
+        ]);
+        $input_healthinfo = Arr::only($request->input('healthinfo', []), [
+            'recent_issues', 'recent_issues_doctor', 'drug_longterm', 'drug_demand', 'drug_emergency', 'chronicle_diseases', 'allergy',
+        ]);
+        $input_health_questions = $request->input('health_question', []);
 
         $camp = Camp::where('id', $healthform['camp_id'])->first();
         if (! $camp['demo'] && $file_allergies = $request->file('healthform.file_allergies')) {
@@ -374,7 +285,7 @@ class HealthFormController extends Controller
             if (! file_exists(storage_path($save_path))) {
                 mkdir(storage_path($save_path), 0755, true);
             }
-            $name = 'Allergiepass.'.$file_allergies->getClientOriginalExtension();
+            $name = 'Allergiepass.pdf';
 
             $file_allergies->move(storage_path($save_path), $name);
             $input_healthform['file_allergies'] = $save_path.'/'.$name;
@@ -382,23 +293,23 @@ class HealthFormController extends Controller
 
         $healthinfo = Helper::getHealthInfo($healthform['code']);
 
-        $input_healthform['swimmer'] = isset($input_healthform['swimmer']);
-        if ($input['submit_btn'] == 'Gesundheitsblatt abschliessen') {
-            $healthform['finish'] = true;
-            $healthform['date_finished'] = now();
+        $input_healthform['swimmer'] = $request->has('healthform.swimmer');
+        if ($finish) {
+            $input_healthform['finish'] = true;
+            $input_healthform['date_finished'] = now();
             $message = 'Dein Gesundheitsblatt wurde übermittelt, vielen Dank.';
-            $finish = true;
         } else {
-            $finish = false;
             $message = 'Vielen Dank für die Eingaben. Dein Gesundheitsblatt wurde aktualisiert.';
         }
-        $input_healthinfo['drugs_only_contact'] = isset($input_healthinfo['drugs_only_contact']);
-        $input_healthinfo['ointment_only_contact'] = isset($input_healthinfo['ointment_only_contact']);
-        $input_healthinfo['accept_privacy_agreement'] = isset($input_healthinfo['accept_privacy_agreement']);
+        $input_healthinfo['drugs_only_contact'] = $request->has('healthinfo.drugs_only_contact');
+        $input_healthinfo['ointment_only_contact'] = $request->has('healthinfo.ointment_only_contact');
+        $input_healthinfo['accept_privacy_agreement'] = $request->has('healthinfo.accept_privacy_agreement');
         $healthform->update($input_healthform);
         $healthinfo->update($input_healthinfo);
         foreach ($input_health_questions as $key => $input_health_question) {
-            HealthInformationQuestion::where('id', $key)->update(['answer' => $input_health_question]);
+            HealthInformationQuestion::where('id', $key)
+                ->where('health_information_id', $healthinfo->id)
+                ->update(['answer' => $input_health_question]);
         }
         if (Auth::user()) {
             if (! $camp['konekta']) {
@@ -417,15 +328,19 @@ class HealthFormController extends Controller
 
     public function downloadAllergy(HealthForm $healthform)
     {
-        //
-        return response()->download(storage_path($healthform['file_allergies']));
+        $this->authorize('access', $healthform);
+
+        $path = Helper::uploadedFilePath($healthform['file_allergies']);
+        abort_if($path === null, 404);
+
+        return response()->download($path);
     }
 
     /**
      * Remove the specified resource from storage.
      *
      * @param  \App\Models\Health_Form  $health_Form
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy(Health_Form $health_Form)
     {
@@ -445,5 +360,41 @@ class HealthFormController extends Controller
         $groups = Group::on('mysql_info')->search($request->get('term'))->get();
 
         return $groups;
+    }
+
+    /**
+     * GET /healthform?form=...: ein in dieser Session per Codes freigeschaltetes Blatt erneut anzeigen
+     * (z. B. nach einem Validierungsfehler), solange das Lager läuft.
+     */
+    private function showUnlockedForm(Request $request)
+    {
+        $id = $request->query('form');
+        if (! in_array($id, session(HealthFormPolicy::UNLOCKED_SESSION_KEY, []), true)) {
+            return redirect('/');
+        }
+        $healthform = HealthForm::findOrFail($id);
+        $camp = Camp::findOrFail($healthform->camp_id);
+        if ($camp['finish']) {
+            return redirect('/');
+        }
+
+        return $this->participantFormView($healthform, $camp);
+    }
+
+    /**
+     * Formular für Teilnehmende; abgeschlossene Blätter nur lesend, wenn das Lager das so eingestellt hat.
+     */
+    private function participantFormView(HealthForm $healthform, Camp $camp)
+    {
+        $healthinfo = Helper::getHealthInfo($healthform['code']);
+        $title = 'Hallo';
+        $subtitle = ' '.$healthform['nickname'].' ('.$healthform['code'].')';
+        $help = Help::where('title', $title)->first();
+        if ($healthform['finish'] && $camp['forms_finished']) {
+            return view('healthform.show', compact('healthform', 'healthinfo', 'title', 'subtitle', 'help'));
+        }
+        $health_questions = $healthinfo->questions;
+
+        return view('healthform.edit', compact('healthform', 'healthinfo', 'health_questions', 'title', 'subtitle', 'help', 'camp'));
     }
 }

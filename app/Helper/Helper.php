@@ -2,11 +2,14 @@
 
 namespace App\Helper;
 
+use App\Enums\TrafficLight;
+use App\Enums\UserRole;
 use App\Models\Camp;
 use App\Models\CampUser;
 use App\Models\Group;
 use App\Models\HealthForm;
 use App\Models\HealthInformation;
+use App\Models\HealthInformationQuestion;
 use App\Models\HealthStatus;
 use App\Models\Help;
 use App\Models\Intervention;
@@ -18,30 +21,12 @@ class Helper
 {
     public static function getHealthInfo($code)
     {
-        $healthinfos = HealthInformation::get();
-        $healthinfo = null;
-        foreach ($healthinfos as $act_healthinfo) {
-            if ($code == $act_healthinfo['code']) {
-                $healthinfo = $act_healthinfo;
-                break;
-            }
-        }
-
-        return $healthinfo;
+        return HealthInformation::where('code', $code)->first();
     }
 
     public static function getHealthForm($code)
     {
-        $healthforms = HealthForm::get();
-        $healthform = null;
-        foreach ($healthforms as $act_healthform) {
-            if ($code == $act_healthform['code']) {
-                $healthform = $act_healthform;
-                break;
-            }
-        }
-
-        return $healthform;
+        return HealthForm::where('code_hash', HealthForm::hashCode($code))->first();
     }
 
     public static function updateGroup($master, $group_text)
@@ -59,7 +44,7 @@ class Helper
         $camp_user = CampUser::firstOrCreate(['camp_id' => $camp->id, 'user_id' => $user->id]);
         $role_id = $camp_user['role_id'];
         if ($role_id === null) {
-            $role_id = $camp['global_camp'] ? config('status.role_Teilnehmer') : $user['role_id'];
+            $role_id = $camp['global_camp'] ? UserRole::Participant : $user['role_id'];
         }
         $camp_user->update([
             'role_id' => $role_id,
@@ -79,6 +64,22 @@ class Helper
         return $code;
     }
 
+    /**
+     * Medizinischer Teil eines neuen Gesundheitsblatts, mit leeren Antworten auf die aktiven Fragen des Lagers.
+     */
+    public static function createHealthInformation(Camp $camp, int $code): HealthInformation
+    {
+        $healthInformation = HealthInformation::create(['code' => $code, 'camp_id' => $camp->id]);
+        foreach ($camp->questions as $question) {
+            HealthInformationQuestion::create([
+                'question_id' => $question->id,
+                'health_information_id' => $healthInformation->id,
+            ]);
+        }
+
+        return $healthInformation;
+    }
+
     public static function generateUniqueCampCode(): int
     {
         do {
@@ -92,9 +93,10 @@ class Helper
     {
         $status = null;
         if (! isset($intervention['date_close'])) {
-            $red = $intervention['health_status_id'] == config('status.health_red') ? 'red' : '';
-            $yellow = $intervention['health_status_id'] == config('status.health_yellow') ? 'yellow' : '';
-            $green = ($intervention['health_status_id'] == config('status.health_green')) || ! isset($intervention['health_status_id']) ? 'green' : '';
+            $light = $intervention->health_status_id ?? TrafficLight::Green;
+            $red = $light === TrafficLight::Red ? 'red' : '';
+            $yellow = $light === TrafficLight::Yellow ? 'yellow' : '';
+            $green = $light === TrafficLight::Green ? 'green' : '';
 
             $status = '<div class="text-center-profile mbl">
                                     <div class="ampel row" id="ampel">
@@ -151,6 +153,23 @@ class Helper
         if ($intervention_sub) {
             $intervention->update(['health_status_id' => $intervention_sub['health_status_id']]);
         }
+    }
+
+    /**
+     * Absoluter Pfad einer hochgeladenen Datei, aber nur, wenn sie wirklich in storage/app/files liegt.
+     */
+    public static function uploadedFilePath(?string $relativePath): ?string
+    {
+        if (blank($relativePath)) {
+            return null;
+        }
+        $uploadFolder = realpath(storage_path('app/files'));
+        $path = realpath(storage_path($relativePath));
+        if ($uploadFolder === false || $path === false || ! str_starts_with($path, $uploadFolder.DIRECTORY_SEPARATOR) || ! is_file($path)) {
+            return null;
+        }
+
+        return $path;
     }
 
     public static function getAvatarPath($avatar)

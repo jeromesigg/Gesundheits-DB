@@ -1,12 +1,12 @@
 {
-  "name": "GK-DB: Devcontainer",
+  "name": "Gesundheits-DB: Devcontainer",
   "dockerComposeFile": [
     "../docker-compose.yml"
   ],
   "service": "laravel.test",
   "workspaceFolder": "/var/www/html",
 
-  "postCreateCommand": "cp /workspaces/gk-db/.devcontainer/.bashrc ~/.bashrc",
+  "postCreateCommand": "cp /workspaces/gesundheits-db/.devcontainer/.bashrc ~/.bashrc",
 
   "settings": {
     "terminal.integrated.defaultProfile.linux": "bash"
@@ -15,7 +15,8 @@
     "ms-php.php-pack",
     "xdebug.php-debug",
     "bmewburn.vscode-intelephense-client",
-    "esbenp.prettier-vscode"
+    "esbenp.prettier-vscode",
+    "Anthropic.claude-code"
   ],
   "remoteUser": "sail"
 }
