@@ -73,11 +73,6 @@ class UserRoleTest extends TestCase
         $this->assertFalse($user->isHelper());
     }
 
-    public function test_assignable_roles_exclude_administrator(): void
-    {
-        $this->assertSame([UserRole::CampLeader, UserRole::Helper, UserRole::Participant], UserRole::assignable());
-    }
-
     public function test_membership_casts_role(): void
     {
         $scenario = CampScenario::create();

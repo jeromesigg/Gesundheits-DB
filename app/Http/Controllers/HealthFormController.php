@@ -7,6 +7,7 @@ use App\Helper\Helper;
 use App\Http\Requests\HealthFormUpdateRequest;
 use App\Http\Requests\ImportHealthFormsRequest;
 use App\Http\Requests\StoreHealthFormRequest;
+use App\Imports\HealthFormImportRow;
 use App\Imports\HealthFormsImport;
 use App\Models\Camp;
 use App\Models\City;
@@ -23,7 +24,6 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Maatwebsite\Excel\Facades\Excel;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 use Yajra\DataTables\Facades\DataTables;
 
 class HealthFormController extends Controller
@@ -134,59 +134,39 @@ class HealthFormController extends Controller
 
     public function uploadFile(ImportHealthFormsRequest $request)
     {
-        if ($request->hasFile('file')) {
+        $rows = (new HealthFormsImport)->toArray($request->file('file'))[0];
+        $camp = Auth::user()->camp;
+        $invalidRows = [];
 
-            $array = (new HealthFormsImport)->toArray(request()->file('file'));
-            $importData_arr = $array[0];
-            foreach ($importData_arr as &$importData) {
-                if (! empty($importData['geburtstag'])) {
-                    if (is_numeric($importData['geburtstag'])) {
-                        $dayCarbon = Carbon::instance(Date::excelToDateTimeObject($importData['geburtstag']));
-                        $day = Carbon::parse($dayCarbon)->format('Y-m-d');
-                        $importData['geburtstag'] = $day;
-                    } else {
-                        $importData['geburtstag'] = trim($importData['geburtstag']);
-                        $day = Carbon::parse($importData['geburtstag'])->format('Y-m-d');
-                        $importData['geburtstag'] = $day;
-
-                    }
-                }
-                $importData['ceviname'] = $importData['ceviname'] ? $importData['ceviname'] : $importData['vorname'];
-
+        foreach ($rows as $index => $row) {
+            $attributes = HealthFormImportRow::attributes($row);
+            if ($attributes['ahv'] === '' || HealthFormImportRow::isEmpty($row['geburtstag'] ?? null)) {
+                continue;
             }
+            if ($attributes['birthday'] === null) {
+                $invalidRows[] = $index + 2;
 
-            $camp = Auth::user()->camp;
-
-            // Insert to MySQL database
-            foreach ($importData_arr as $importData_row) {
-                if (! empty(trim($importData_row['ahv_nr'])) && ! empty(trim($importData_row['geburtstag']))) {
-                    $group = Group::where('short_name', '=', $importData_row['abteilung'])->first();
-                    $code = Helper::generateUniqueCode();
-                    $insertData = [
-
-                        'code' => Crypt::encryptString($code),
-                        'first_name' => trim($importData_row['vorname']),
-                        'last_name' => trim($importData_row['nachname']),
-                        'nickname' => trim($importData_row['ceviname']),
-                        'street' => trim($importData_row['strasse']),
-                        'zip_code' => trim($importData_row['plz']),
-                        'city' => trim($importData_row['ort']),
-                        'birthday' => trim($importData_row['geburtstag']),
-                        'ahv' => trim($importData_row['ahv_nr']),
-                        'group_id' => $group ? $group['id'] : null,
-                        'group_text' => $importData_row['abteilung'],
-                        'camp_id' => $camp['id'],
-                    ];
-                    $healthform = HealthForm::firstOrCreate(['ahv' => trim($importData_row['ahv_nr']), 'camp_id' => $camp['id']], $insertData);
-                    if ($healthform->wasRecentlyCreated) {
-                        Helper::createHealthInformation($camp, $code);
-                    }
-                }
+                continue;
+            }
+            $code = Helper::generateUniqueCode();
+            $group = Group::where('short_name', '=', $attributes['group_text'])->first();
+            $healthform = HealthForm::firstOrCreate(['ahv' => $attributes['ahv'], 'camp_id' => $camp['id']], $attributes + [
+                'code' => Crypt::encryptString($code),
+                'group_id' => $group ? $group['id'] : null,
+                'camp_id' => $camp['id'],
+            ]);
+            if ($healthform->wasRecentlyCreated) {
+                Helper::createHealthInformation($camp, $code);
             }
         }
 
-        return redirect()->action('HealthFormController@index');
+        $redirect = redirect()->route('healthforms.index');
+        if ($invalidRows !== []) {
+            $redirect->with('message', 'Zeilen '.implode(', ', $invalidRows).' übersprungen: Geburtstag nicht erkannt. '
+                .'Erlaubt sind TT.MM.JJJJ, TT/MM/JJJJ, JJJJ-MM-TT oder ein Excel-Datum.');
+        }
 
+        return $redirect;
     }
 
     public function NewCode(HealthForm $healthform)

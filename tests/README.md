@@ -4,7 +4,7 @@
 
 > **Beim Hinzufügen eines Tests bitte diese Datei ergänzen**, siehe [Neuen Test schreiben](#neuen-test-schreiben).
 
-Stand 08.10.2026: **271 Testfälle in 37 Dateien**, Laufzeit rund 8 Sekunden.
+Stand 10.10.2026: **300 Testfälle in 39 Dateien**, Laufzeit rund 8 Sekunden.
 Aktuelle Zahlen: `vendor/bin/phpunit --list-tests`
 
 ## Inhalt
@@ -108,9 +108,11 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Interventionen | `Intervention/InterventionStoreTest` | 5 | Speichern: nur Formularfelder, Nummern/Zuordnung/Bildpfad vom Server |
 | Enums | `Enums/UserRoleTest` | 10 | Rollen: Werte = Tabelle `roles`, Rechte aus dem Enum, Vorauswahl im Formular |
 | Enums | `Enums/TrafficLightTest` | 8 | Ampel: Werte = Tabelle `health_statuses`, Anzeige, Sortierung, Vorauswahl |
+| Unit | `Unit/Imports/HealthFormImportRowTest` | 23 | Zeile der Teilnehmerliste: Datumsformate, Ceviname, Trimmen (ohne Laravel/DB) |
+| Unit | `Unit/Enums/UserRoleTest`, `Unit/Enums/TrafficLightTest` | 7 | Rechte pro Rolle, Ampelfarben (ohne DB) |
 | Hilfen | `Helper/HealthFormLookupTest` | 5 | Suche nach persönlichem Code über `code_hash`, Nachtrag per Migration |
 | Gesundheitsblatt | `HealthForm/HealthFormCreateTest` | 3 | Lagerleitung erstellt Blatt: Code, Gesundheitsinfo, Fragen |
-| Gesundheitsblatt | `HealthForm/HealthFormImportTest` | 4 | Import der ausgefüllten Vorlage `public/files/vorlage.xlsx` |
+| Gesundheitsblatt | `HealthForm/HealthFormImportTest` | 5 | Import der ausgefüllten Vorlage `public/files/vorlage.xlsx` |
 | Gesundheitsblatt | `HealthForm/HealthFormExportTest` | 3 | Export nur mit Blättern des eigenen Lagers |
 | Interventionen | `Intervention/InterventionWorkflowTest` | 5 | Folge-Interventionen, Abschliessen, Status (Ampel) |
 | Lager | `Camp/CampAdminsTest` | 4 | Admins des Global-Camps werden Admin in neuen Lagern |
@@ -121,7 +123,7 @@ vendor/bin/pint          # Code-Stil korrigieren
 | Gesundheitsblatt | `HealthForm/HealthFormUpdateTest` | 7 | Speichern und Abschliessen durch Teilnehmende, nur Formularfelder, Allergiepass |
 | Gesundheitsinfos | `HealthInformation/HealthInformationRequestTest` | 7 | Suche nach Code, Protokoll hoch-/herunterladen, Teilnehmerliste nur Excel/CSV |
 | Registrierung | `Auth/RegistrationTest` | 3 | Registrierung, doppelte E-Mail, Passwort-Bestätigung |
-| Beispiele | `ExampleTest` (Feature, Unit) | 2 | Laravel-Beispiele |
+| Beispiele | `ExampleTest` (Feature) | 1 | Laravel-Beispiel |
 
 ### Grundlagen
 
@@ -162,6 +164,14 @@ vendor/bin/pint          # Code-Stil korrigieren
 **[`HealthInformationRequestTest`](Feature/HealthInformation/HealthInformationRequestTest.php)**: Suche ohne Code, mit eigenem und fremdem Code; Protokoll-Download ohne Datei (404).
 
 `HealthFormAccessTest` zusätzlich: `GET /healthform` ohne Codes leitet zur Startseite, Allergiepass-Download ohne Datei 404.
+
+### Unit-Tests
+
+`tests/Unit` erbt von `PHPUnit\Framework\TestCase` (ohne Laravel, ohne DB, Millisekunden). Nur für reine Logik; alles mit Requests, Policies oder Abfragen bleibt Feature-Test.
+
+**[`HealthFormImportRowTest`](Unit/Imports/HealthFormImportRowTest.php)**: `App\Imports\HealthFormImportRow`, eine Zeile der Vorlage. Geburtstag erlaubt als Excel-Datum, `TT.MM.JJJJ`, `T.M.JJJJ`, `TT/MM/JJJJ`, `JJJJ-MM-TT`; zweistellige Jahre, unmögliche Daten (31.02.), US-Format, Zukunft und vor 1900 ergeben `null` (vorher: heutiges Datum, Überlauf in den Folgemonat oder Absturz des ganzen Imports). Der Import überspringt solche Zeilen und meldet die Zeilennummern (`HealthFormImportTest`).
+
+**[`Unit/Enums`](Unit/Enums)**: `UserRole::canManage()/canHelp()/assignable()`, `TrafficLight::cssClass()` und Reihenfolge der Werte.
 
 ### Enums
 

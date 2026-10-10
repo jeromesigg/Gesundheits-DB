@@ -8,6 +8,7 @@ use App\Models\HealthInformation;
 use App\Models\HealthInformationQuestion;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use Illuminate\Testing\TestResponse;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use Tests\Support\CampScenario;
@@ -71,6 +72,21 @@ class HealthFormImportTest extends TestCase
         $this->assertSame($count, HealthForm::count());
     }
 
+    public function test_rows_with_unrecognised_birthday_are_skipped_and_reported(): void
+    {
+        $count = HealthForm::count();
+
+        $this->import([
+            ['CZH', 'Gut', 'Gina', '', '', '', '', '17/05/2012', '756.0000.0000.01'],
+            ['CZH', 'Kurz', 'Kai', '', '', '', '', '3.2.11', '756.0000.0000.02'],
+            ['CZH', 'Falsch', 'Fia', '', '', '', '', '31.02.2012', '756.0000.0000.03'],
+        ])->assertSessionHas('message', fn (string $message) => str_contains($message, 'Zeilen 3, 4')
+            && str_contains($message, 'TT.MM.JJJJ'));
+
+        $this->assertSame($count + 1, HealthForm::count());
+        $this->assertSame('2012-05-17', HealthForm::where('ahv', '756.0000.0000.01')->value('birthday'));
+    }
+
     public function test_importing_the_same_list_twice_creates_nothing_new(): void
     {
         $rows = [['CZH', 'Muster', 'Anna', 'Fuchs', 'Weg 1', '8000', 'Zürich', '17.05.2012', '756.1234.5678.97']];
@@ -99,14 +115,14 @@ class HealthFormImportTest extends TestCase
      *
      * @param  array<int, array<int, mixed>>  $rows
      */
-    private function import(array $rows): void
+    private function import(array $rows): TestResponse
     {
         $spreadsheet = IOFactory::load(public_path('files/vorlage.xlsx'));
         $spreadsheet->getActiveSheet()->fromArray($rows, null, 'A2');
         $path = $this->directory.'/liste-'.uniqid().'.xlsx';
         IOFactory::createWriter($spreadsheet, 'Xlsx')->save($path);
 
-        $this->actingAs($this->scenario->manager)
+        return $this->actingAs($this->scenario->manager)
             ->post('/dashboard/healthform/uploadFile', ['file' => new UploadedFile($path, 'Teilnehmerliste.xlsx', null, null, true)])
             ->assertRedirect(route('healthforms.index'));
     }
