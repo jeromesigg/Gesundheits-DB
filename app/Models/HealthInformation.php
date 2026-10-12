@@ -33,6 +33,8 @@ class HealthInformation extends Model implements Auditable
 
     public $incrementing = false;
 
+    protected $keyType = 'string';
+
     public $timestamps = false;
 
     public function interventions()

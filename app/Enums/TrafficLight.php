@@ -22,4 +22,16 @@ enum TrafficLight: int
             self::Red => 'red',
         };
     }
+
+    /**
+     * Anzeigename, wie in der Tabelle health_statuses.
+     */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Green => 'Grün',
+            self::Yellow => 'Gelb',
+            self::Red => 'Rot',
+        };
+    }
 }
