@@ -21,8 +21,8 @@ Um das Tool lokal bei dir benutzen zu können musst du den Quellcode herunterlad
 
 ```bash
 # clone the GitRepo
-git clone https://github.com/jeromesigg/ehealth
-cd ehealth
+git clone https://github.com/jeromesigg/Gesundheits-DB.git
+cd Gesundheits-DB
 
 # install the dependencies
 docker run --rm \

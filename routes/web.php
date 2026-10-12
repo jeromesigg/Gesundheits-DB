@@ -100,6 +100,7 @@ Route::group(['middleware' => 'verified'], function () {
         Route::post('healthforms/{healthform}/open', ['as' => 'healthforms.open', 'uses' => 'HealthFormController@open']);
         Route::get('dashboard/healthform/downloadFile', ['as' => 'healthforms.downloadFile', 'uses' => 'HealthFormController@downloadFile']);
         Route::post('dashboard/healthform/uploadFile', 'HealthFormController@uploadFile');
+        Route::get('dashboard/camps/{camp}/export', ['as' => 'dashboard.camps.export', 'uses' => 'AdminCampController@export']);
         Route::resource('dashboard/camps', 'AdminCampController', ['as' => 'dashboard']);
 
     });

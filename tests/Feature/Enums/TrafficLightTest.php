@@ -23,6 +23,14 @@ class TrafficLightTest extends TestCase
         );
     }
 
+    public function test_enum_labels_match_health_status_table(): void
+    {
+        $this->assertSame(
+            HealthStatus::orderBy('id')->pluck('name')->all(),
+            array_map(fn (TrafficLight $light) => $light->label(), TrafficLight::cases())
+        );
+    }
+
     /**
      * @return array<string, array{?TrafficLight, string}>
      */

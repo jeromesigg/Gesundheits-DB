@@ -26,6 +26,8 @@ class HealthForm extends Model implements Auditable
 
     public $incrementing = false;
 
+    protected $keyType = 'string';
+
     public function group()
     {
         return $this->belongsTo(Group::class);

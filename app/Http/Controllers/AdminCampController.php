@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Events\CampCreated;
+use App\Exports\CampExport;
 use App\Helper\Helper;
 use App\Http\Requests\UpdateCampRequest;
 use App\Models\Camp;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AdminCampController extends Controller
 {
@@ -139,6 +142,17 @@ class AdminCampController extends Controller
         }
 
         return redirect('/dashboard/camps');
+    }
+
+    /**
+     * Teilnehmende und Interventionen eines laufenden Lagers als Excel (zwei Tabellenblätter).
+     */
+    public function export(Camp $camp): BinaryFileResponse
+    {
+        $this->authorize('manage', $camp);
+        abort_if($camp->finish, 404);
+
+        return Excel::download(new CampExport($camp), 'Lagerexport.xlsx');
     }
 
     /**

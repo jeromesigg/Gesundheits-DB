@@ -9,8 +9,9 @@ use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithTitle;
 
-class HealthFormsExport implements FromCollection, WithHeadings, WithMapping
+class HealthFormsExport implements FromCollection, WithHeadings, WithMapping, WithTitle
 {
     public function __construct(public Camp $camp) {}
 
@@ -52,5 +53,10 @@ class HealthFormsExport implements FromCollection, WithHeadings, WithMapping
             'Geburtstag',
             'Ausgefüllt',
         ];
+    }
+
+    public function title(): string
+    {
+        return 'Teilnehmende';
     }
 }
